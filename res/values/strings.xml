@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">CameraEx</string>
+    <string name="action_settings">Settings</string>
+	<string name="button_TakeOff">Disabled</string>
+	<string name="button_Land">Enabled</string>
+	<string name="button_connect">Connect</string>
+    
+</resources>

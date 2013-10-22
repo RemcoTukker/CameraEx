@@ -1,0 +1,38 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity" >
+    
+	<FrameLayout
+     android:id="@+id/frameLayout"
+     android:layout_width="match_parent"
+     android:layout_height="match_parent"
+     android:layout_margin="0dip"/>
+	
+    <LinearLayout
+        android:id="@+id/linearLayout1"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:orientation="vertical" >
+
+        <ToggleButton
+            android:id="@+id/takeOff"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:onClick="takeOff"
+            android:textOff="@string/button_Land"
+            android:textOn="@string/button_TakeOff" />
+        <Button
+            android:id="@+id/connectP"
+            android:layout_marginLeft="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/button_connect"
+            android:onClick="connectP" />
+    </LinearLayout>
+
+</RelativeLayout>
