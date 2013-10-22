@@ -310,16 +310,20 @@ public class ImgProcss extends Thread {
 		}
 	}
 	private float objectSize () {
-		int cX1,cX2;
-		float x;
+		int cX1,cX2,cY1,cY2;
+		float x,y,h;
 		
 		if (wGClusters.size() != 2) {
 			return -1;
 		} else {
 			cX1 = (wGClusters.get(0)[0] + wGClusters.get(0)[2]) >> 1;
-			cX2 = (wGClusters.get(1)[0] + wGClusters.get(1)[2]) >> 1;
-			x = Math.abs(cX1 - cX2) * N * 3;
-			return round(x / pXcm,1000);
+			cX2 = (wGClusters.get(1)[0] + wGClusters.get(1)[2]) >> 1;			
+			cY1 = (wGClusters.get(0)[1] + wGClusters.get(0)[3]) >> 1;
+			cY2 = (wGClusters.get(1)[1] + wGClusters.get(1)[3]) >> 1;
+			x = cX1 - cX2;
+			y = cY1 - cY2;
+			h = (float)Math.sqrt(x*x + y*y) * N * 3;
+			return round(h / pXcm,1000);
 		}
 	}
 	public float pixelsTocm (float pixels) {
