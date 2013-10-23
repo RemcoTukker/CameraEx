@@ -341,6 +341,7 @@ public class ImgProcss extends Thread {
 		//w = 2arctan(h2 (sensor) / 2*sensorH(M + 1))
 		float h2Sensor;
 		double w;
+		Log.i("objct size"+ objectSize(),"objct size"+ objectSize());
 		h2Sensor = (objectSize() * sensorH) / imageWSize ();
 		w = 2 * Math.atan(h2Sensor / (fL2 * ((h2Sensor / h1) + 1)));
 		return (float)(h1 / Math.tan(w));

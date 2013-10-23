@@ -10,6 +10,7 @@ public class PID extends Thread {
 	/*Control*/
 	private volatile float 	xP = 0, xI =  0, xD = 0, xPID, yP = 0, yI =  0, yD = 0, yPID, zP = 0, zI =  0, zD = 0, zPID; 
 	private volatile float 	xKP = 0, xKI =  0, xKD = 0, yKP = 0, yKI =  0, yKD = 0, zKP = 0, zKI =  0, zKD = 0;
+	private volatile float 	xN = 0, yN =  0, zN = 0;
 	private volatile float	xError = 0, xPrevError = 0, yError = 0, yPrevError = 0, zError = 0, zPrevError = 0;
 	volatile float	xPosAct = -1, xPosDes = -1, yPosAct = -1, yPosDes = -1, zPosAct = -1, zPosDes = -1;
 	volatile float signum; 
@@ -18,7 +19,7 @@ public class PID extends Thread {
 	/*Flags*/
 	private volatile  boolean running = true, stable = false;
 	/*Time*/
-	private volatile long 	t, dt;
+	private volatile float 	t, dt;
 	
 	private Object mPauseLock = new Object();  
 	private boolean mPaused;
@@ -38,9 +39,10 @@ public class PID extends Thread {
 		xError 	 	= 0; yError 	= 0; zError 	= 0;
 		xPrevError	= 0; yPrevError	= 0; zPrevError	= 0;
 		xPosAct = -1; xPosDes = -1; yPosAct = -1; yPosDes = -1; zPosAct = -1; zPosDes = -1;
-		xKP = 1f; xKI =  0.00001f; xKD = 10f;
-		yKP = 1f; yKI =  0.00001f; yKD = 9f;
-		zKP = 1f; zKI =  0.00001f; zKD = 10f;
+		xKP = 0.8f; xKI =  0.00001f; xKD = 0.22f;
+		yKP = 0.8f; yKI =  0.00001f; yKD = 0.22f;
+		zKP = 0.8f; zKI =  0.00001f; zKD = 0.22f;
+		xN = 230; yN = 700; zN = 230;
 		xP = 0; xI =  0; xD = 0; 
 		yP = 0; yI =  0; yD = 0;
 		zP = 0; zI =  0; zD = 0;
@@ -77,50 +79,46 @@ public class PID extends Thread {
 			Log.i("xPosDes: "+xPosDes,"xPosAct: "+xPosAct);
 			Log.i("yPosDes: "+yPosDes,"yPosAct: "+yPosAct);
 			Log.i("zPosDes: "+zPosDes,"zPosAct: "+zPosAct);
+			dt = (SystemClock.uptimeMillis() - t) / 1000;
+			t = SystemClock.uptimeMillis(); 
+			Log.i("dt: " + dt,"dt "+ dt);
 			if (xPosAct > 0 && xPosDes > 0) {
-				dt = SystemClock.uptimeMillis() - t;
-					xError = xPosDes - xPosAct;
-					t = SystemClock.uptimeMillis(); 
-					if (stable) {		
-						xP  = xError * xKP; 
-						xI += 0;//sKI * error ;
-						xD  = xKD * (xError - xPrevError);
-					}
-					stable = true;
-					xPrevError = xError;
-					xPID = xP + xI + xD;
-					if (xPID < 0) signum = -1; else signum = 1; 
-					xPID /= 700; //signum *LPF(PID,0.1f,40)
-					if (xPID > 1) xPID = 1;
-					if (xPID < -1) xPID = -1;
+				xError = xPosDes - xPosAct;
+				if (stable) {		
+					xP  = xError * xKP; 
+					xI += 0;
+					xD  = xKD * ((xError - xPrevError) / dt);
+				}
+				stable = true;
+				xPrevError = xError;
+				xPID = xP + xI + xD;
+				xPID /= xN;
+				within (xPID,-1,1);
+				Log.i("xP: " + xP,"xD: "+xD);
 			}
 			if (yPosAct > 0 && yPosDes > 0) {
 				yError = yPosDes - yPosAct;
 				if (stable) {		
 					yP  = yError * yKP; 
-					yI += 0;//fKI * error ;
-					yD  = yKD * (yError - yPrevError);
+					yI += 0;
+					yD  = yKD * ((yError - yPrevError) / dt);
 				}
 				yPrevError = yError;
 				yPID = yP + yI + yD;
-				if (yPID < 0) signum = -1; else signum = 1; 
-				yPID /= 1000; //signum *LPF(PID,0.1f,40)
-				if (yPID > 1) yPID = 1;
-				if (yPID < -1) yPID = -1;
+				yPID /= yN;
+				within (yPID,-1,1);
 			}
 			if (zPosAct > 0 && zPosDes > 0) {
 					zError = zPosDes - zPosAct;
 					if (stable) {		
 						zP  = zError * zKP; 
-						zI += 0;//sKI * error ;
-						zD  = zKD * (zError - zPrevError);
+						zI += 0;
+						zD = zKD * ((zError - zPrevError) / dt);
 					}
 					zPrevError = zError;
 					zPID = zP + zI + zD;
-					if (zPID < 0) signum = -1; else signum = 1; 
-					zPID /= 700; //signum *LPF(PID,0.1f,40)
-					if (zPID > 1) zPID = 1;
-					if (zPID < -1) zPID = -1;
+					zPID /= zN;
+					within (zPID,-1,1);
 			}
 			if (stable) {
 				if (Math.abs(xError) < 5) xPID = 0;
@@ -130,7 +128,6 @@ public class PID extends Thread {
 					step = (step + 30) % 360;
 					circle (step);
 					aRDrone.hover();
-				//	aRDrone.hover();
 				}
 				aRDrone.executeMoveCompose(xPID ,-yPID, zPID, 0f);
 			}
@@ -146,9 +143,19 @@ public class PID extends Thread {
 //		}
 //		Log.i("END THREAD","PID");
 	}
+	    
+    private float within(float x, float min, float max) {
+        if (x < min) return min;
+        if (x > max) return max;
+        return x;
+    }
+    
+    private float signum (float x) {
+		if (x < 0) return -1; else return 1; 
+    }
 	
 	public void circle (double t) {
-		xPosDes = 150f + (float)(20*Math.cos((t*Math.PI)/180));
+		xPosDes = 130f + (float)(20*Math.cos((t*Math.PI)/180));
 		zPosDes = 60f + (float)(20*Math.sin((t*Math.PI)/180));
 	}
 	
