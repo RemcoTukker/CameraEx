@@ -64,16 +64,18 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
     }
 }  */
 	
+	private Buffers mBuffers;
 	
 	static Parrot aRDrone;
 	private PID mPID;
+	private Slope mSlope;
     private ImgProcss mImgProcss;
     private CameraPreview mCameraPreview;
     private DrawView mDrawView;
     private int camResW=320,camResH=240,scale=3;
     FrameLayout mFrameLayout;
     volatile float touched_x, touched_y;
-    private boolean mPIDIsRunning,loaded = false,connected = false;
+    private boolean mPIDIsRunning,loaded = false,connected = false,mBuffersIsRunning = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -102,6 +104,7 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
         mFrameLayout.setLayoutParams(params);
         */
 	        aRDrone = new Parrot ();
+        	mBuffers = new Buffers (aRDrone);
 	        mPID = new PID (aRDrone);
 	        mDrawView = new DrawView(this,camResW,camResH,scale);
 	        mImgProcss	= new ImgProcss (mDrawView, mPID);
@@ -109,6 +112,8 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
 	        mFrameLayout.addView(mCameraPreview);
 	        mFrameLayout.addView(mDrawView);
 	        mPIDIsRunning = false;
+	        mBuffersIsRunning = false;
+	        mSlope = new Slope ();
 	        loaded = true;
     	}
  
@@ -128,6 +133,10 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
         if (aRDrone != null) {
         	aRDrone.destroy();
         	aRDrone = null;
+        }
+        if (mBuffers != null) {
+        	mBuffers.onStop();
+        	mBuffers = null;
         }
         mImgProcss = null;
         mDrawView = null;
@@ -171,7 +180,10 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
 	        aRDrone.connect();
     	}       
     }
+    
     public boolean onTouchEvent(MotionEvent event) {
+    	
+    	int eventAction = event.getAction();
 
     	touched_x = event.getRawX();
     	touched_y = event.getRawY();
@@ -180,11 +192,51 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
     	if (touched_x < 0) touched_x = 0;
     	if (touched_y > 742) touched_y = 742; 
     	touched_y -= 22;
-    	if (touched_y < 0) touched_y = 0;
-    	if (aRDrone.m_bConnected){
-    		mPID.begin ();
-    	}
+    	if (touched_y < 0) touched_y = 0;	
+    	
+    	switch (eventAction) {
+	        case MotionEvent.ACTION_DOWN: 
+	            // finger touches the screen
+	        	Log.i("ACTIONDOWN","ACTIONDOWN");
+	        	mSlope.onSet(touched_x, touched_y);
+	            break;
+	
+	        case MotionEvent.ACTION_MOVE:
+	            // finger moves on the screen
+	        	Log.i("ACTIONMOVE","ACTIONMOVE");
+
+	        	mSlope.update(touched_x, touched_y);
+	            break;
+	
+	        case MotionEvent.ACTION_UP:   
+	            // finger leaves the screen
+	        	Log.i("ACTIONUP","ACTIONUP");
+	        	mSlope.getSlopes();
+	            break;
+	        default:
+	        	break;
+    }
+    	
+    //	if (aRDrone.m_bConnected){
+     //   	startBuffers (3,5,20);
+
+    //		mPID.begin ();
+    //	}
+    	
     	return true;
     }
+
+    
+	public void startBuffers(int a, int b, int c) {
+	    mBuffers.onPause();
+    	mBuffers.Set(a, b, c);
+		if (!mBuffersIsRunning) {
+	    	mBuffers.start();
+	        mBuffersIsRunning = true;
+	    } else {
+	    	mBuffers.onResume();
+	    }
+	}
+    
 }
 

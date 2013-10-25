@@ -41,7 +41,7 @@ public class PID extends Thread {
 		xPosAct = -1; xPosDes = -1; yPosAct = -1; yPosDes = -1; zPosAct = -1; zPosDes = -1;
 		xKP = 0.8f; xKI =  0.00001f; xKD = 0.22f;
 		yKP = 0.8f; yKI =  0.00001f; yKD = 0.22f;
-		zKP = 0.8f; zKI =  0.00001f; zKD = 0.22f;
+		zKP = 0.9f; zKI =  0.00001f; zKD = 0.22f;
 		xN = 230; yN = 700; zN = 230;
 		xP = 0; xI =  0; xD = 0; 
 		yP = 0; yI =  0; yD = 0;
@@ -76,12 +76,12 @@ public class PID extends Thread {
 	//public void run() {
 	//    this.Set();
 	    public void runPID () {
-			Log.i("xPosDes: "+xPosDes,"xPosAct: "+xPosAct);
-			Log.i("yPosDes: "+yPosDes,"yPosAct: "+yPosAct);
-			Log.i("zPosDes: "+zPosDes,"zPosAct: "+zPosAct);
+//			Log.i("xPosDes: "+xPosDes,"xPosAct: "+xPosAct);
+//			Log.i("yPosDes: "+yPosDes,"yPosAct: "+yPosAct);
+//			Log.i("zPosDes: "+zPosDes,"zPosAct: "+zPosAct);
 			dt = (SystemClock.uptimeMillis() - t) / 1000;
 			t = SystemClock.uptimeMillis(); 
-			Log.i("dt: " + dt,"dt "+ dt);
+//			Log.i("dt: " + dt,"dt "+ dt);
 			if (xPosAct > 0 && xPosDes > 0) {
 				xError = xPosDes - xPosAct;
 				if (stable) {		
