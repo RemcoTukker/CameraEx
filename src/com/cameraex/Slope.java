@@ -113,8 +113,8 @@ public class Slope {
     	edges ();
     }
     
-    public void edges () {
-    	int id = 0, prevId = 0, prevId2 = 0, edges = 1;
+    public int edges () {
+    	int id = 0, prevId = 0, prevId2 = 0, edges = 1, info = 0;
     	float toleranceX,toleranceY;
     	
     	for (int i = 0;i < bufferSX.size();i++) {
@@ -147,11 +147,16 @@ public class Slope {
     			} else {
     				//ERROR!!
     			}
-    		} 
+    		} else{
+    			info = id;
+    		}
     		prevId2 = prevId;
     		prevId = id;
     	}
-    	Log.i("EDGES: "+edges,"EDGES: "+edges);
+    	info |=  (edges << 3);
+
+    	Log.i("EDGES: "+edges,"info: "+info);
+    	return info;
     }
     
     private float signum (float x) {
