@@ -212,7 +212,8 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
 	            // finger leaves the screen
 	        	Log.i("ACTIONUP","ACTIONUP");
 	        	
-	        	startBuffers (2, 5, 20, mSlope.getSlopes());
+	        	startBuffers (2, 5, 20, mSlope.getSlopes(touched_x, touched_y));
+	        	Log.i("info: "+mSlope.getSlopes(touched_x, touched_y),"wrfaee");
 	            break;
 	        default:
 	        	break;
