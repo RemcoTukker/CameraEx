@@ -211,7 +211,8 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
 	        case MotionEvent.ACTION_UP:   
 	            // finger leaves the screen
 	        	Log.i("ACTIONUP","ACTIONUP");
-	        	mSlope.getSlopes();
+	        	
+	        	startBuffers (2, 5, 20, mSlope.getSlopes());
 	            break;
 	        default:
 	        	break;
@@ -227,9 +228,9 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
     }
 
     
-	public void startBuffers(int a, int b, int c) {
+	public void startBuffers(int a, int b, int c, int d) {
 	    mBuffers.onPause();
-    	mBuffers.Set(a, b, c);
+    	mBuffers.Set(a, b, c, d);
 		if (!mBuffersIsRunning) {
 	    	mBuffers.start();
 	        mBuffersIsRunning = true;

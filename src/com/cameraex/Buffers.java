@@ -18,10 +18,19 @@ public class Buffers extends Thread {
 	static Parrot aRDrone = null;
 
 	private float t,dt,p1,p2;
+	private int p3;
 	private int figure;
 	private LinkedList<params> bufParams = new LinkedList<params>();
 	private Object mPauseLock = new Object();  
 	private boolean mPaused,  mRunning ,bufCreated;
+	private float[] squareCC = new float[] { 	0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f,
+										   	   -0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f, 0.25f,-0.40f,
+										   		0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f,
+										   		0.15f, 0.00f, 0.15f, 0.00f, 0.15f, 0.00f, 0.15f, 0.00f, 0.15f, 0.00f,-0.25f, 0.00f };
+	private float[] squareCW = new float[] { 	0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f,
+												0.15f, 0.00f, 0.15f, 0.00f, 0.15f, 0.00f, 0.15f, 0.00f, 0.15f, 0.00f,-0.25f, 0.00f,
+		   	   								   	0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f,
+		   	   								   -0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f, 0.25f,-0.40f };
 	
 	public Buffers (Parrot parrot) {
         aRDrone = parrot;
@@ -30,10 +39,12 @@ public class Buffers extends Thread {
 		bufCreated = false;
 	}
 
-	public void Set (int fig, float a, float b) {
+	public void Set (int fig, float a, float b, int c) {
 		figure = fig;
 		p1 = a;
 		p2 = b;
+		p3 = c; 
+		
 		mRunning = true;
 		mPaused  = false;
 		bufCreated = false;
@@ -66,15 +77,18 @@ public class Buffers extends Thread {
 			dt = SystemClock.uptimeMillis() - t;
 			if (dt > 150) {
 				t = SystemClock.uptimeMillis(); 
+				figure = (p3 & 448) >> 6;
+				Log.i("figure: "+figure,"p3: "+p3);
 				switch (figure) {
 					case 1:
-						if (circle (p1)) this.onPause();
-						break;
-					case 2:
-						if (square ()) this.onPause();
+						if (line (p1,p2)) this.onPause();
+					//	if (circle (p1)) this.onPause();
 						break;
 					case 3:
-						if (line (p1,p2)) this.onPause();
+						
+						break;
+					case 4:
+						if (square (p3)) this.onPause();
 						break;
 					default:
 						break;						
@@ -100,16 +114,16 @@ public class Buffers extends Thread {
 		}
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
-			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
+//			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
 			return false;
 		} else {
 			return true;
 		}
 	}
 	
-	private boolean square () {
+	private boolean square (int info) {
 		if (!bufCreated) { 
-			bufSquare ();
+			bufSquare (info);
 			bufCreated = true;
 		}
 		if (!bufParams.isEmpty()) {
@@ -128,12 +142,27 @@ public class Buffers extends Thread {
 		}
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
-			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
+//			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
 			return false;
 		} else {
 			return true;
 		}
 	}
+	
+/*	private boolean triangle (float direction, float length) {
+		if (!bufCreated) { 
+			bufTriangle (direction, length);
+			bufCreated = true;
+		}
+		if (!bufParams.isEmpty()) {
+			params param = bufParams.removeFirst();
+//			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
+			return false;
+		} else {
+			return true;
+		}
+	}*/
+	
 	private void bufCircle (float R) {
 		float vX,vZ, xPos, zPos,prevXPos = R, prevZPos = 0;
 		bufParams.clear();
@@ -168,24 +197,62 @@ public class Buffers extends Thread {
 		}
 	}
 	
-	private void bufSquare () {
+	private void bufSquare (int info) {
 		float vX,vZ;
+		int direction,p,s=0;
+		
 		bufParams.clear();
-		for (int i = 0;i < 360;i += 15) {
-			if (i < 45) {
-				vX = 0f; vZ = 0.4f;
-			} else if (i < 135) {
-				vX = -0.15f; vZ = 0f;
-			} else if (i == 135) {
-				vX = 0.25f; vZ = -0.4f;
-			} else if (i < 225) {
-				vX = 0f; vZ = -0.4f;
-			} else if (i < 315) {
-				vX = 0.15f; vZ = 0f;
-			} else if (i == 315) {
-				vX = -0.25f; vZ = 0.4f;
+		
+		direction = info & 63;
+		//--------------
+		//   1 \ / 2
+		//   3 / \ 4
+		//--------------
+		switch (direction) {
+		case 10://(1 --> 2) CW
+			s = 36;
+			direction = 1;
+			break;
+		case 11://(1 --> 3) CC
+			s = 0;
+			direction = 0;
+			break;
+		case 17://(2 --> 1) CC
+			s = 12;
+			direction = 0;
+			break;
+		case 28://(3 --> 4) CC
+			s = 24;
+			direction = 0;
+			break;
+		case 34://(4 --> 2) CC
+			s = 36;
+			direction = 0;
+			break;
+		case 35://(4 --> 3) CW
+			s = 12;
+			direction = 1;
+			break;
+		case 36://(2 --> 4) CW
+			s = 0;
+			direction = 1;
+			break;
+		case 49://(3 --> 1) CW
+			s = 24;
+			direction = 1;
+			break;
+		default:
+			break;
+		}
+		for (int i = 0;i < 23;i ++) {
+			p = (i + s) % 23;
+			Log.i("p: "+p,"direction: "+ direction);
+			if (direction != 1) {
+				vX = squareCC[p*2];
+				vZ = squareCC[p*2+1];
 			} else {
-				vX = 0f; vZ = 0.4f;
+				vX = squareCW[p*2];
+				vZ = squareCW[p*2+1];
 			}
 			params param = new params(vX,0,vZ);
 			bufParams.add(param);

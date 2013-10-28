@@ -94,7 +94,7 @@ public class Slope {
     	return 1;
     }
     
-    public void getSlopes () {
+    public int getSlopes () {
     	
     	for (int i = 0;i < bufferSX.size();i++) {
     		if (signum(bufferSX.get(i)) > 0) {
@@ -110,10 +110,10 @@ public class Slope {
     		Log.i ("x acum: " + bufferAX.get(i),"y acum: " + bufferAY.get(i));
     	}
     	Log.i("-----------------------","-----------------------");
-    	edges ();
+    	return edges ();
     }
     
-    public int edges () {
+    private int edges () {
     	int id = 0, prevId = 0, prevId2 = 0, edges = 1, info = 0;
     	float toleranceX,toleranceY;
     	
@@ -136,6 +136,8 @@ public class Slope {
     					} else {
     						//ERROR!
     					} 
+    				} else {
+    					info |=  (id << 3);
     				}
     				Log.i("toleranceX: "+toleranceX,"toleranceY: "+toleranceY);
     				if (bufferAX.get(i) > 200 || bufferAY.get(i) > 200) {
@@ -153,7 +155,7 @@ public class Slope {
     		prevId2 = prevId;
     		prevId = id;
     	}
-    	info |=  (edges << 3);
+    	info |=  (edges << 6);
 
     	Log.i("EDGES: "+edges,"info: "+info);
     	return info;
