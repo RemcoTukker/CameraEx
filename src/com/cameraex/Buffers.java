@@ -376,16 +376,16 @@ public class Buffers extends Thread {
 				vZ = lineD4[i*2+1];
 				break;
 			case 5:
-				vX = lineV[i*2];
-				vZ = lineV[i*2+1];
+				vX = -lineV[i*2];
+				vZ = -lineV[i*2+1];
 				break;
 			case 6:
 				vX = lineH[i*2];
 				vZ = lineH[i*2+1];
 				break;
 			case 7:
-				vX = -lineV[i*2];
-				vZ = -lineV[i*2+1];
+				vX = lineV[i*2];
+				vZ = lineV[i*2+1];
 				break;
 			case 8:
 				vX = -lineH[i*2];

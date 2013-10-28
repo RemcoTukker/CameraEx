@@ -158,8 +158,8 @@ public class Slope {
 		if (edges == 1) {
 			sX = (x - inX ) / n;
 			sY = (y - inY ) / n;
-			if (sX == 0) return info = -(int)signum(sY) * ((edges << 6) + 5);
-			if (sY == 0) return info = -(int)signum(sX) * ((edges << 6) + 6);
+			if (sX == 0) return (int)signum(sY) * ((edges << 6) + 5);
+			if (sY == 0) return (int)signum(sX) * ((edges << 6) + 6);
 			m = Math.abs(sY / sX);
 			if (m > 0.3 && m < 5) {
 				if (sX < 0 && sY < 0) return info = (edges << 6) + 1;
