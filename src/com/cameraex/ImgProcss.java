@@ -37,11 +37,11 @@ public class ImgProcss extends Thread {
 	private boolean mPaused = true;
     
 	public ImgProcss (DrawView drawView, PID pid) {
-        wGClusters 	= new LinkedList<int[]>();
-        wBClusters 	= new LinkedList<int[]>();
-        mDrawView   = drawView;
-        mPID		= pid;
-        mPaused 	= true;
+		wGClusters 	= new LinkedList<int[]>();
+		wBClusters 	= new LinkedList<int[]>();
+		mDrawView   = drawView;
+		mPID		= pid;
+		mPaused 	= true;
 	}
 	
 	public void Set (byte[] data,int resW,int resH,int n) {
@@ -59,34 +59,34 @@ public class ImgProcss extends Thread {
 	}
 	
 	public void onPause() {
-	    synchronized (mPauseLock) {
-	        mPaused = true;
-	    }
+		synchronized (mPauseLock) {
+			mPaused = true;
+		}
 	}
 
 	public void onResume () {
-	    synchronized (mPauseLock) {
-	        mPaused = false;
-	    	mDrawView.invalidate();
-	        mPauseLock.notifyAll();
-	    }
+		synchronized (mPauseLock) {
+			mPaused = false;
+			mDrawView.invalidate();
+			mPauseLock.notifyAll();
+		}
 	}
 	public boolean paused () {
-	    return mPaused; 
+		return mPaused; 
 	}
 	public void run() {
 		
 		while (running) {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
-	        YuvImage yuv = new YuvImage(mData, ImageFormat.NV21, mCamResW, mCamResH, null);
-	        mData = null;
-	        yuv.compressToJpeg(new Rect(0, 0, mCamResW, mCamResH), 100, out);
-	        byte[] bytes = out.toByteArray();
-	        mBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-	        bytes = null;
+			YuvImage yuv = new YuvImage(mData, ImageFormat.NV21, mCamResW, mCamResH, null);
+			mData = null;
+			yuv.compressToJpeg(new Rect(0, 0, mCamResW, mCamResH), 100, out);
+			byte[] bytes = out.toByteArray();
+			mBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+			bytes = null;
 			Sampling(2);
-	    	this.onPause();
-	    	synchronized (mPauseLock) {
+			this.onPause();
+			synchronized (mPauseLock) {
 			    while (mPaused) {
 			        try {
 			            mPauseLock.wait();
@@ -323,6 +323,7 @@ public class ImgProcss extends Thread {
 			x = cX1 - cX2;
 			y = cY1 - cY2;
 			h = (float)Math.sqrt(x*x + y*y) * N * 3;
+			Log.i("ObjectSize: " + h/pXcm,"ObjectSize: " + h/pXcm);
 			return round(h / pXcm,1000);
 		}
 	}

@@ -1,6 +1,7 @@
 package com.cameraex;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 
 import robots.parrot.ctrl.Parrot;
@@ -16,7 +17,7 @@ public class Buffers extends Thread {
 	
 	
 	static Parrot aRDrone = null;
-
+	static PID	mPID = null;
 	private float t,dt,p1,p2;
 	private int p3;
 	private int figure;
@@ -43,20 +44,25 @@ public class Buffers extends Thread {
 	private float[] lineD2 = new float[] {  0.10f, 0.40f, 0.10f, 0.40f, 0.10f, 0.40f, 0.10f, 0.40f, 0.10f, 0.40f,-0.25f,-0.30f };
 	private float[] lineD3 = new float[] { -0.10f,-0.40f,-0.10f,-0.40f,-0.10f,-0.40f,-0.10f,-0.40f,-0.10f,-0.40f, 0.25f, 0.30f };
 	private float[] lineD4 = new float[] {  0.10f,-0.40f, 0.10f,-0.40f, 0.10f,-0.40f, 0.10f,-0.40f, 0.10f,-0.40f,-0.25f, 0.30f };
+
+	private ArrayList<Integer> bufferLines = new ArrayList<Integer>();
 	
-	public Buffers (Parrot parrot) {
+	
+	public Buffers (Parrot parrot, PID pid) {
         aRDrone = parrot;
+        mPID	= pid;
 		mRunning = true;
 		mPaused  = false;
 		bufCreated = false;
 	}
 
-	public void Set (int fig, float a, float b, int c) {
+	public void Set (int fig, float a, float b, int c, ArrayList<Integer> aL) {
+		mPID.clearPIDEn();
 		figure = fig;
 		p1 = a;
 		p2 = b;
 		p3 = c; 
-		
+		bufferLines = aL; 
 		mRunning = true;
 		mPaused  = false;
 		bufCreated = false;
@@ -68,6 +74,7 @@ public class Buffers extends Thread {
 	
 	public void onPause() {
 	    synchronized (mPauseLock) {
+	    	mPID.setPIDEn();
 	        mPaused = true;
 	    }
 	}
@@ -87,7 +94,7 @@ public class Buffers extends Thread {
 		
 		while (mRunning) {
 			dt = SystemClock.uptimeMillis() - t;
-			if (dt > 180) {
+			if (dt > 140) {
 				t = SystemClock.uptimeMillis(); 
 				if (p3 > 0) figure = (p3 & 448) >> 6;
 				else figure = (p3 & 448) >> 6 ^ 7;
@@ -102,7 +109,11 @@ public class Buffers extends Thread {
 					case 4:
 						if (square (p3)) this.onPause();
 						break;
+					case 5:
+						if (lines (bufferLines)) this.onPause();
+						break;
 					default:
+						this.onPause();
 						break;						
 				}
 			}
@@ -126,7 +137,8 @@ public class Buffers extends Thread {
 		}
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
-//			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
+			if (aRDrone != null)
+			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
 			return false;
 		} else {
 			return true;
@@ -140,7 +152,8 @@ public class Buffers extends Thread {
 		}
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
-			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
+			if (aRDrone != null)
+			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
 			return false;
 		} else {
 			return true;
@@ -154,11 +167,30 @@ public class Buffers extends Thread {
 		}
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
-			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
+			if (aRDrone != null)
+			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
 			return false;
 		} else {
 			return true;
 		}
+	}
+	
+	private boolean lines (ArrayList<Integer> bL) {
+		if (!bufCreated) { 
+			if (bL.size() != 0) {
+				bufLine (bL.remove(0));
+				bufCreated = true;
+			}
+		}
+		if (!bufParams.isEmpty()) {
+			params param = bufParams.removeFirst();
+			if (aRDrone != null)
+			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
+		} else {
+			if (bL.size() != 0) bufCreated = false;
+			else return true;
+		}
+		return false;
 	}
 	
 	private boolean triangle (int info) {
@@ -168,7 +200,8 @@ public class Buffers extends Thread {
 		}
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
-			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
+			if (aRDrone != null)
+			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
 			return false;
 		} else {
 			return true;

@@ -103,9 +103,9 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
         params.height = camResH*3;
         mFrameLayout.setLayoutParams(params);
         */
-	        aRDrone = new Parrot ();
-        	mBuffers = new Buffers (aRDrone);
-	        mPID = new PID (aRDrone);
+			aRDrone = new Parrot ();
+			mPID = new PID (aRDrone);
+			mBuffers = new Buffers (aRDrone,mPID);
 	        mDrawView = new DrawView(this,camResW,camResH,scale);
 	        mImgProcss	= new ImgProcss (mDrawView, mPID);
 	        mCameraPreview = new CameraPreview(this, mImgProcss);   	    
@@ -197,20 +197,18 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
     	switch (eventAction) {
 	        case MotionEvent.ACTION_DOWN: 
 	            // finger touches the screen
-	        	Log.i("ACTIONDOWN","ACTIONDOWN");
+	        	mPID.begin();
 	        	mSlope.onSet(touched_x, touched_y);
 	            break;
 	
 	        case MotionEvent.ACTION_MOVE:
 	            // finger moves on the screen
-	        	Log.i("ACTIONMOVE","ACTIONMOVE");
 
 	        	mSlope.update(touched_x, touched_y);
 	            break;
 	
 	        case MotionEvent.ACTION_UP:   
 	            // finger leaves the screen
-	        	Log.i("ACTIONUP","ACTIONUP");
 	        	
 	        	startBuffers (2, 5, 20, mSlope.getSlopes(touched_x, touched_y));
 	        	Log.i("info: "+mSlope.getSlopes(touched_x, touched_y),"wrfaee");
@@ -231,7 +229,7 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
     
 	public void startBuffers(int a, int b, int c, int d) {
 	    mBuffers.onPause();
-    	mBuffers.Set(a, b, c, d);
+    	mBuffers.Set(a, b, c, d,mSlope.getBufferLines());
 		if (!mBuffersIsRunning) {
 	    	mBuffers.start();
 	        mBuffersIsRunning = true;

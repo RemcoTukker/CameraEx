@@ -21,9 +21,12 @@ public class PID extends Thread {
 	/*Time*/
 	private volatile float 	t, dt;
 	
-	private Object mPauseLock = new Object();  
+	private Object mPauseLock = new Object();
+	private Object mY = new Object();
+	private Object mEPID = new Object();
 	private boolean mPaused;
-
+	
+	private boolean enabledPID;
 	// Constructor stuff.      
 
 	// This should be after your drawing/update code inside your thread's run() code.
@@ -34,15 +37,16 @@ public class PID extends Thread {
 	}
 	
 	private void Set () {
+		enabledPID  = true;
 		stable		= false;
 		running		= true;
 		xError 	 	= 0; yError 	= 0; zError 	= 0;
 		xPrevError	= 0; yPrevError	= 0; zPrevError	= 0;
 		xPosAct = -1; xPosDes = -1; yPosAct = -1; yPosDes = -1; zPosAct = -1; zPosDes = -1;
 		xKP = 0.8f; xKI =  0.00001f; xKD = 0.22f;
-		yKP = 0.8f; yKI =  0.00001f; yKD = 0.22f;
+		yKP = 0.8f; yKI =  0.00001f; yKD = 0.01f;
 		zKP = 0.9f; zKI =  0.00001f; zKD = 0.22f;
-		xN = 230; yN = 700; zN = 230;
+		xN = 230; yN = 500; zN = 230;
 		xP = 0; xI =  0; xD = 0; 
 		yP = 0; yI =  0; yD = 0;
 		zP = 0; zI =  0; zD = 0;
@@ -62,22 +66,21 @@ public class PID extends Thread {
 	}
 
 	public void onResume() {
-	    synchronized (mPauseLock) {
-	    	this.Set();
-	        mPaused = false;
-	        mPauseLock.notifyAll();
-	    }
+		synchronized (mPauseLock) {
+			this.Set();
+			mPaused = false;
+			mPauseLock.notifyAll();
+		}
 	}
 	public void begin () {
 		this.Set();
 		circle (0);
-		yPosDes = 130;
+		yPosDes = 140;
 	}
 	//public void run() {
 	//    this.Set();
-	    public void runPID () {
+		public void runPID () {
 //			Log.i("xPosDes: "+xPosDes,"xPosAct: "+xPosAct);
-//			Log.i("yPosDes: "+yPosDes,"yPosAct: "+yPosAct);
 //			Log.i("zPosDes: "+zPosDes,"zPosAct: "+zPosAct);
 			dt = (SystemClock.uptimeMillis() - t) / 1000;
 			t = SystemClock.uptimeMillis(); 
@@ -93,20 +96,31 @@ public class PID extends Thread {
 				xPrevError = xError;
 				xPID = xP + xI + xD;
 				xPID /= xN;
-				within (xPID,-1,1);
-				Log.i("xP: " + xP,"xD: "+xD);
+				xPID = within (xPID,-1,1,-0.05f,0.05f);
 			}
 			if (yPosAct > 0 && yPosDes > 0) {
+				synchronized (mY) {
+				Log.i(".  .  .  .  .  .  .  ",".  .  .  .  .  .  .  ");
+				Log.i("yPosDes: "+yPosDes,"yPosAct: "+yPosAct);
 				yError = yPosDes - yPosAct;
-				if (stable) {		
+				if (stable) {
 					yP  = yError * yKP; 
 					yI += 0;
 					yD  = yKD * ((yError - yPrevError) / dt);
 				}
 				yPrevError = yError;
-				yPID = yP + yI + yD;
-				yPID /= yN;
-				within (yPID,-1,1);
+					yPID = yP + yI + yD;
+					yPID /= yN;
+					yPID = -within (yPID,-0.08f,0.08f,-0.04f,0.04f);	// (-)!!!
+					Log.i("yPID: " + yPID,"Just Created");
+					Log.i("yP: " + yP,"yD: " + yD);
+					Log.i(".  .  .  .  .  .  .  ",".  .  .  .  .  .  .  ");
+					if (Math.abs(yError) < 20) yPID = 0;
+					if (enabledPID && yPID != 0) {
+						Log.i("inside PID: " + yPID,"inside PID");
+						aRDrone.executeMoveCompose(0,yPID,0, 0f);
+					}
+				}
 			}
 			if (zPosAct > 0 && zPosDes > 0) {
 					zError = zPosDes - zPosAct;
@@ -118,18 +132,20 @@ public class PID extends Thread {
 					zPrevError = zError;
 					zPID = zP + zI + zD;
 					zPID /= zN;
-					within (zPID,-1,1);
+					zPID = within (zPID,-1,1,-0.05f,0.05f);
 			}
 			if (stable) {
 				if (Math.abs(xError) < 5) xPID = 0;
 				if (Math.abs(yError) < 20) yPID = 0;
 				if (Math.abs(zError) < 5) zPID = 0;
-				if (xPID == 0 && zPID == 0) {
+	/*			if (xPID == 0 && zPID == 0) {
 					step = (step + 30) % 360;
 					circle (step);
 					aRDrone.hover();
 				}
-				aRDrone.executeMoveCompose(xPID ,-yPID, zPID, 0f);
+				*/
+				//aRDrone.executeMoveCompose(xPID,-yPID, zPID, 0f);
+				
 			}
 //	    	this.onPause();
 //			synchronized (mPauseLock) {
@@ -143,16 +159,37 @@ public class PID extends Thread {
 //		}
 //		Log.i("END THREAD","PID");
 	}
-	    
-    private float within(float x, float min, float max) {
-        if (x < min) return min;
-        if (x > max) return max;
-        return x;
-    }
-    
-    private float signum (float x) {
+	
+	public void setPIDEn () {
+		synchronized (mEPID) {
+			enabledPID = true;
+		}
+	}
+	
+	public void clearPIDEn () {
+		synchronized (mEPID) {
+			enabledPID = false;
+		}
+	}
+	
+	public float getYPID () {
+		synchronized (mY) {
+			Log.i("yPID: " + yPID,"GETmethod");
+			return yPID;
+		}	
+	}
+		
+	private float within(float x, float min, float max, float min2, float max2) {
+		if (x < min) return min;
+		if (x > max) return max;
+		if (x > min2 && x < 0) return min2;
+		if (x < max2 && x > 0) return max2;
+		return x;
+	}
+
+	private float signum (float x) {
 		if (x < 0) return -1; else return 1; 
-    }
+	}
 	
 	public void circle (double t) {
 		xPosDes = 130f + (float)(20*Math.cos((t*Math.PI)/180));
@@ -170,7 +207,7 @@ public class PID extends Thread {
 		
 	}
 	public float round(float d, int decimal) {
-	    return (float)Math.round(d*decimal) / decimal;
+		return (float)Math.round(d*decimal) / decimal;
 	}
 	
 }

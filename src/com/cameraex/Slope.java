@@ -12,17 +12,23 @@ public class Slope {
 	private ArrayList<Float> bufferSY = new ArrayList<Float>();
 	private ArrayList<Float> bufferAX = new ArrayList<Float>();
 	private ArrayList<Float> bufferAY = new ArrayList<Float>();
+	private ArrayList<Integer> bufferLines = new ArrayList<Integer>();
 	
 	private float prevX = 0, prevY = 0, xAcum, yAcum,inX,inY;
 	private boolean stable = false, stable2 = false;
 	private final int  sizeMax = 13;
 	private int n;
+	
+	public  ArrayList<Integer> getBufferLines () {
+		return bufferLines;
+	}
 	public void onSet (float x, float y){
 		inX = x; inY = y;
 		stable = false; stable2 = false;
 		bufferX.clear(); bufferY.clear();
 		bufferSX.clear(); bufferSY.clear();
 		bufferAX.clear(); bufferAY.clear();
+		bufferLines.clear();
 		prevX = 0; prevY = 0;
 	}
 
@@ -33,11 +39,8 @@ public class Slope {
 		if (y > prevY) actSlopeY = 10; else actSlopeY = -10;
 		//actSlopeX = x - prevX;
 		//actSlopeY = y - prevY;
-		Log.i("inX: "+inX,"inY: "+inY);
-		Log.i("x: "+x,"y: "+y);
 		xAcum += Math.abs(x - inX);
 		yAcum += Math.abs(y - inY);
-		Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
 		n += 1;
 		prevX = x; prevY = y;
 		if (stable) {
@@ -65,23 +68,43 @@ public class Slope {
 			sSlopeY += signum (bY);
 			slopeY += Math.abs (bY);
 		}
-		slopeX = sSlopeX * slopeX;
-		slopeY = sSlopeY * slopeY;
+		slopeX = signum(sSlopeX) * (slopeX / bufferX.size());
+		slopeY = signum(sSlopeY) * (slopeY / bufferY.size());
 		if (stable2) {
 			if (signum(bufferSX.get(bufferSX.size() - 1)) != signum(slopeX)) { 
-				bufferSX.add(slopeX);bufferSY.add(slopeY);
-				bufferAX.add(xAcum);bufferAY.add(yAcum);
-				update = true;
+				
+				for (Float xx : bufferSX) {
+					Log.i("slope_x: " + xx,"fdihwpsfiow");
+				}
+				Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
+				Log.i("slopeeeeeeeeeeeeeeee","slopeeeeeeeeeeeeeeeeeeeeee");
+				if (xAcum > 300 || yAcum > 300) {
+					bufferSX.add(slopeX);bufferSY.add(slopeY);
+					bufferAX.add(xAcum);bufferAY.add(yAcum);
+					bufferLines.add(toLines(inX,inY,x,y,n));
+					update = true;
+				}
 			}
 			if (signum(bufferSY.get(bufferSY.size() - 1)) != signum(slopeY)) {
-				bufferSX.add(slopeX);bufferSY.add(slopeY);
-				bufferAX.add(xAcum);bufferAY.add(yAcum);
-				update = true;
+				for (Float xx : bufferSY) {
+					Log.i("slope_y: " + xx,"fdihwpsfiow");
+				}
+				Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
+
+				Log.i("aaaaaaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaaaaaaaaaa");
+				if (xAcum > 300 || yAcum > 300) {
+					bufferSX.add(slopeX);bufferSY.add(slopeY);
+					bufferAX.add(xAcum);bufferAY.add(yAcum);
+					if (!update) {
+						bufferLines.add(toLines(inX,inY,x,y,n));
+						update = true;
+					}
+				}
 			}
 		} else {
-			bufferSX.add(slopeX);
-			bufferSY.add(slopeY);
+			bufferSX.add(slopeX);bufferSY.add(slopeY);
 			bufferAX.add(xAcum);bufferAY.add(yAcum);
+			bufferLines.add(toLines(inX,inY,x,y,n));
 			update = true;
 			stable2 = true;
 		}
@@ -109,15 +132,19 @@ public class Slope {
 			}
 			Log.i ("x acum: " + bufferAX.get(i),"y acum: " + bufferAY.get(i));
 		}
+		for (Integer c : bufferLines) {
+			Log.i("object: " + c,"object: " + c);
+		}
 		Log.i("-----------------------","-----------------------");
+		avSlope (x,y);
 		return edges (x,y);
 	}
 
 	private int edges (float x, float y) {
 		int id = 0, prevId = 0, prevId2 = 0, edges = 1, info = 0;
-		float toleranceX,toleranceY,sX,sY,m;
+		float toleranceX,toleranceY;
 		
-		for (int i = 0;i < bufferSX.size();i++) {
+	/*	for (int i = 0;i < bufferSX.size();i++) {
 			if (signum(bufferSX.get(i)) < 0 && signum(bufferSY.get(i)) < 0) {
 				id = 1;
 			} else if (signum(bufferSX.get(i)) < 0 && signum(bufferSY.get(i)) > 0) {
@@ -155,26 +182,45 @@ public class Slope {
 			prevId2 = prevId;
 			prevId = id;
 		}
-		if (edges == 1) {
-			sX = (x - inX ) / n;
-			sY = (y - inY ) / n;
-			if (sX == 0) return (int)signum(sY) * ((edges << 6) + 5);
-			if (sY == 0) return (int)signum(sX) * ((edges << 6) + 6);
-			m = Math.abs(sY / sX);
-			if (m > 0.3 && m < 5) {
-				if (sX < 0 && sY < 0) return info = (edges << 6) + 1;
-				if (sX < 0 && sY > 0) return info = (edges << 6) + 3;
-				if (sX > 0 && sY < 0) return info = (edges << 6) + 2;
-				if (sX > 0 && sY > 0) return info = (edges << 6) + 4;
-			} else {
-				if (m >= 5.0) return (int)signum(sY) *((edges << 6) + 5);
-				if (m <= 0.3) return (int)signum(sX) *((edges << 6) + 6);
-			}
+		*/
+		if (bufferLines.size() > 0) {
+			info = 320;
+		} else {
+			info = 0;
+		}
+		/*if (edges == 1) {
+			toLines(inX,inY,x,y,n);
 		}
 		info |= (edges << 6);
+		*/
 		return info;
 	}
+	
+	private int toLines (float xi, float yi, float xo, float yo,int N) {
+		float sX,sY,m;
+		int edges = 1;
+		
+		sX = (xo - xi ) / N;
+		sY = (yo - yi ) / N;
+		if (sX == 0) return (int)signum(sY) * ((edges << 6) + 5);
+		if (sY == 0) return (int)signum(sX) * ((edges << 6) + 6);
+		m = Math.abs(sY / sX);
 
+		Log.i("--------","--------");
+		Log.i("m: " + m,"m: " + m);
+		Log.i("--------","--------");
+		if (m > 0.4 && m < 5) {
+			if (sX < 0 && sY < 0) return (edges << 6) + 1;
+			if (sX < 0 && sY > 0) return (edges << 6) + 3;
+			if (sX > 0 && sY < 0) return (edges << 6) + 2;
+			if (sX > 0 && sY > 0) return (edges << 6) + 4;
+		} else {
+			if (m >= 5.0) return (int)signum(sY) *((edges << 6) + 5);
+			if (m <= 0.4) return (int)signum(sX) *((edges << 6) + 6);
+		}
+		return 0;
+	}
+	
 	private float signum (float x) {
 		if (x < 0) return -1; 
 		else return 1;
