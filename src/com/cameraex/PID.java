@@ -44,7 +44,7 @@ public class PID extends Thread {
 		xPrevError	= 0; yPrevError	= 0; zPrevError	= 0;
 		xPosAct = -1; xPosDes = -1; yPosAct = -1; yPosDes = -1; zPosAct = -1; zPosDes = -1;
 		xKP = 0.8f; xKI =  0.00001f; xKD = 0.22f;
-		yKP = 0.8f; yKI =  0.00001f; yKD = 0.01f;
+		yKP = 0.8f; yKI =  0.00001f; yKD = 0.05f;//0.05f;
 		zKP = 0.9f; zKI =  0.00001f; zKD = 0.22f;
 		xN = 230; yN = 500; zN = 230;
 		xP = 0; xI =  0; xD = 0; 
@@ -108,18 +108,19 @@ public class PID extends Thread {
 					yI += 0;
 					yD  = yKD * ((yError - yPrevError) / dt);
 				}
+				yPID = yP + yI + yD;
+				yPID /= yN;
+				yPID = -within (yPID,-0.08f,0.08f,-0.04f,0.04f);	// (-)!!!
+				Log.i("yPID: " + yPID,"dt: " + dt);
+				Log.i("yP: " + yP,"yD: " + yD);
+				Log.i("yError: " + yError,"yPrevError: " + yPrevError);
+				Log.i(".  .  .  .  .  .  .  ",".  .  .  .  .  .  .  ");
+				if (Math.abs(yError) < 20) yPID = 0;
+				if (enabledPID && yPID != 0) {
+					Log.i("inside PID: " + yPID,"inside PID");
+					aRDrone.executeMoveCompose(0,yPID,0, 0f);
+				}
 				yPrevError = yError;
-					yPID = yP + yI + yD;
-					yPID /= yN;
-					yPID = -within (yPID,-0.08f,0.08f,-0.04f,0.04f);	// (-)!!!
-					Log.i("yPID: " + yPID,"Just Created");
-					Log.i("yP: " + yP,"yD: " + yD);
-					Log.i(".  .  .  .  .  .  .  ",".  .  .  .  .  .  .  ");
-					if (Math.abs(yError) < 20) yPID = 0;
-					if (enabledPID && yPID != 0) {
-						Log.i("inside PID: " + yPID,"inside PID");
-						aRDrone.executeMoveCompose(0,yPID,0, 0f);
-					}
 				}
 			}
 			if (zPosAct > 0 && zPosDes > 0) {
