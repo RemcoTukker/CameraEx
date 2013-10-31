@@ -122,13 +122,10 @@ public class ImgProcss extends Thread {
 			if (isChecked (colors[0],colors[1],colors[2])){
 			} else if (isGreen(colors[0],colors[1],colors[2])) {
 				nX = x/N; nY = y/N;
-				findAdyacent (nX,nY,samplesX2, samplesY2,wdwSize,wGClusters);
+				findAdyacentK (nX,nY,samplesX2, samplesY2,wdwSize,wGClusters,wKClusters);
 			} else if (isBlue(colors[0],colors[1],colors[2])) {
 				nX = x/N; nY = y/N;
 				findAdyacent (nX,nY,samplesX2, samplesY2,wdwSize,wBClusters);
-			} else if (isBlack(colors[0],colors[1],colors[2])) {
-				nX = x/N; nY = y/N;
-				findAdyacentK (nX,nY,samplesX2, samplesY2,wdwSize,wKClusters);
 			}
 			if (i%samplesX != 0) { x += N; } else { x = 0;y += N; i += (N - 1)*samplesX; }
 		}
@@ -163,7 +160,7 @@ public class ImgProcss extends Thread {
 		mPID.xPosAct = xPositionCm ();
 		mPID.yPosAct = yPositionCm ();
 		mPID.zPosAct = zPositionCm ();
-		mPID.runPID();
+		mPID.runPID(isRotating ());
 		// Log.i("--------------------","--------------------");
     
     }
@@ -238,46 +235,25 @@ public class ImgProcss extends Thread {
 		int i = 0,j = 0, posX, posY;																//Working in samples
 		int[] colors = new int[3];
 		
-		//	x		x
-		//		o	
-		//	x		x
-		/*if (y > 0 && y < samplesY) {
+		//	x	x	x
+		//	x	o	x
+		//	x	x	x
+		if (y > 0 && y < samplesY) {
 			if (x > 0 && x < samplesX) {
-				for (i = 0;i < 3;i+=2) {
-					for (j = 0;j < 3;j+=2) {
+				for (i = 0;i < 3;i+=1) {
+					for (j = 0;j < 3;j+=1) {
 						posX = (x+(i-1))*N; posY = (y+(j-1))*N;
 						getPixel(posX,posY,mBitmap,colors);
 						if (isRed(colors[0],colors[1],colors[2])) {
 							createCluster (x, y, samplesX, samplesY, wdwSize, wClusters);
+							setPixel(posX,posY,mBitmap);
 							return true;
 						}
 					}
 				}
 			}		
-		}*/
-		if (y < samplesY) {
-			if (x < samplesX) {
-				for (i = 0;i < 2;i++) {
-					posX = (x+1)*N; posY = (y+i)*N;
-					getPixel(posX,posY,mBitmap,colors);
-					if (isRed(colors[0],colors[1],colors[2])) {
-						createCluster (x, y, samplesX, samplesY, wdwSize, wClusters);
-						setPixel(posX,posY,mBitmap);
-						return true;
-					}
-				}
-			}	
 		}
-		return false;
-	}
-	
-	private boolean findAdyacentK (int x,int y, int samplesX, int samplesY,int wdwSize,LinkedList<int[]> wClusters) {
-		int i = 0,j = 0, posX, posY;																//Working in samples
-		int[] colors = new int[3];
-		//	-	-	- 	-	-
-		//	-	o	x	o	x
-		//	-	-	x	-	x
-		if (y < samplesY) {
+		/*if (y < samplesY) {
 			if (x < samplesX) {
 				for (i = 0;i < 2;i++) {
 					posX = (x+1)*N; posY = (y+i)*N;
@@ -288,7 +264,39 @@ public class ImgProcss extends Thread {
 						return true;
 					}
 				}
-			}		
+			}	
+		}*/
+		return false;
+	}
+	
+	private boolean findAdyacentK (int x,int y, int samplesX, int samplesY,int wdwSize,LinkedList<int[]> wClusters,LinkedList<int[]> rClusters) {
+		int i = 0,j = 0, posX, posY;																//Working in samples
+		int[] colors = new int[3];
+		boolean gCreated=false,kCreated=false;
+		//	-	-	- 	-	-
+		//	-	o	x	o	x
+		//	-	-	x	-	x
+
+		
+		if (y > 0 && y < samplesY) {
+			if (x > 0 && x < samplesX) {
+				for (i = 0;i < 3;i+=1) {
+					for (j = 0;j < 3;j+=1) {
+						posX = (x+(i-1))*N; posY = (y+(j-1))*N;
+						getPixel(posX,posY,mBitmap,colors);
+						if (isBlack(colors[0],colors[1],colors[2]) && !kCreated) {
+							createCluster (x, y, samplesX, samplesY, wdwSize, rClusters);
+							setPixel(posX,posY,mBitmap);
+							kCreated = true;
+						}
+						if (isRed(colors[0],colors[1],colors[2]) && !gCreated) {
+							createCluster (x, y, samplesX, samplesY, wdwSize, wClusters);
+							setPixel(posX,posY,mBitmap);
+							gCreated = true;
+						}
+					}
+				}
+			}	
 		}
 		return false;
 	}
@@ -484,7 +492,28 @@ public class ImgProcss extends Thread {
 		w = 2 * Math.atan(h2Sensor / (fL2 * ((h2Sensor / h1) + 1)));
 		return (float)(h1 / Math.tan(w));
 	}
-	
+	public int isRotating () {
+		// 0 not rotating
+		// -1 error
+		// 1 rotating CC
+		// 2 rotating CW
+		int cX1,cX2,cX3;
+		
+		if (wKClusters.isEmpty()) return 0;
+		if (wKClusters.size() > 1) return -1;
+		if (wGClusters.size() != 2) return -1;
+		cX1 = (wGClusters.get(0)[0] + wGClusters.get(0)[2]) >> 1;
+		cX2 = (wGClusters.get(1)[0] + wGClusters.get(1)[2]) >> 1;			
+		cX3 = (wGClusters.get(0)[0] + wGClusters.get(0)[2]) >> 1;
+		if (cX1 < cX2) {
+			if (cX3 < cX1) return 1;	
+			if (cX3 > cX2) return 2;
+		} else {
+			if (cX3 < cX2) return 1;	
+			if (cX3 > cX1) return 2;
+		}
+		return 0;
+	}
 	private float round(float d, int decimal) {
 		return (float)Math.round(d*decimal) / decimal;
 	}

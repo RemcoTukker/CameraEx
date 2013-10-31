@@ -15,7 +15,6 @@ public class PID extends Thread {
 	volatile float	xPosAct = -1, xPosDes = -1, yPosAct = -1, yPosDes = -1, zPosAct = -1, zPosDes = -1;
 	volatile float signum; 
 	volatile double step = 0;
-
 	/*Flags*/
 	private volatile  boolean running = true, stable = false;
 	/*Time*/
@@ -79,7 +78,7 @@ public class PID extends Thread {
 	}
 	//public void run() {
 	//    this.Set();
-		public void runPID () {
+		public void runPID (int rotating) {
 //			Log.i("xPosDes: "+xPosDes,"xPosAct: "+xPosAct);
 //			Log.i("zPosDes: "+zPosDes,"zPosAct: "+zPosAct);
 			dt = (SystemClock.uptimeMillis() - t) / 1000;
@@ -118,7 +117,22 @@ public class PID extends Thread {
 				if (Math.abs(yError) < 20) yPID = 0;
 				if (enabledPID && yPID != 0) {
 					Log.i("inside PID: " + yPID,"inside PID");
-					aRDrone.executeMoveCompose(0,yPID,0, 0f);
+					//rotating = -1;
+					switch (rotating){
+					case -1:
+						aRDrone.executeMoveCompose(0,yPID,0, 0f);
+						break;
+					case 0:
+						aRDrone.executeMoveCompose(0,yPID,0, 0f);
+						break;
+					case 1:
+						aRDrone.executeMoveCompose(0,yPID,0, 0.05f);
+						break;
+					case 2:
+						aRDrone.executeMoveCompose(0,yPID,0, -0.05f);
+						break;
+						
+					}
 				}
 				yPrevError = yError;
 				}
