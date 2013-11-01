@@ -24,20 +24,20 @@ public class ImgProcss extends Thread {
 	private volatile  boolean running = true;
 	
 
-    private LinkedList<int[]> wGClusters;
-    private LinkedList<int[]> wBClusters; 
-    private LinkedList<int[]> wKClusters; 
-    private DrawView mDrawView;
-    private PID mPID;
-    volatile private  byte[] mData;
-    volatile private float pXcm = -1;
-    volatile private Bitmap mBitmap;
-    volatile private int mCamResW,mCamResH,N;
-    final private float sensorH = 2.8f, fL2 = 9.2f, h1 = 24.49f/2;
+	private LinkedList<int[]> wGClusters;
+	private LinkedList<int[]> wBClusters; 
+	private LinkedList<int[]> wKClusters; 
+	private DrawView mDrawView;
+	private PID mPID;
+	volatile private  byte[] mData;
+	volatile private float pXcm = -1;
+	volatile private Bitmap mBitmap;
+	volatile private int mCamResW,mCamResH,N;
+	final private float sensorH = 2.8f, fL2 = 9.2f, h1 = 24.49f/2;
 	
 	private Object mPauseLock = new Object();  
 	private boolean mPaused = true;
-    
+
 	public ImgProcss (DrawView drawView, PID pid) {
 		wGClusters 	= new LinkedList<int[]>();
 		wBClusters 	= new LinkedList<int[]>();
@@ -105,13 +105,13 @@ public class ImgProcss extends Thread {
 	}
 	
 	private void Sampling (int wdwSize) {
-		 int i, samples, samplesY, samplesX,x=0,y=0,nX,nY,nI,samplesY2, samplesX2;
-		 int[] colors = new int[3];
-		 double height,width;
-		 
-	
+		int i, samples, samplesY, samplesX,x=0,y=0,nX,nY,nI,samplesY2, samplesX2;
+		int[] colors = new int[3];
+		double height,width;
+
+
 		height = mBitmap.getHeight(); width = mBitmap.getWidth();
-	//	 mDrawView.mBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+	//	mDrawView.mBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
 		samples  = (int)Math.ceil((height * width) / N);
 		samplesX = (int)Math.ceil(width / N); samplesX2 = samplesX -1;
 		samplesY = (int)Math.ceil(height / N); samplesY2 = samplesY -1;
@@ -162,23 +162,23 @@ public class ImgProcss extends Thread {
 		mPID.zPosAct = zPositionCm ();
 		mPID.runPID(isRotating ());
 		// Log.i("--------------------","--------------------");
-    
-    }
-    private void getPixel (int x, int y,Bitmap bitmap,int[] colors) {
-    	int pixel;
+
+	}
+	private void getPixel (int x, int y,Bitmap bitmap,int[] colors) {
+		int pixel;
 		pixel =  bitmap.getPixel(x, y);
 		colors[0] = (pixel>>16)&0xFF; colors[1] = (pixel>>8)&0xFF; colors[2] = (pixel)&0xFF;
-    }
-    private void setPixel (int x, int y, Bitmap bitmap) {
+	}
+	private void setPixel (int x, int y, Bitmap bitmap) {
 		bitmap.setPixel(x,y,Color.WHITE);
-    }
-    
+	}
+
 	private boolean isChecked (int R, int G, int B) {
 
 		 if (R != 255 || G != 255 || B != 255) return false;
 		 return true;
 	}
-    private boolean isRed (int R, int G, int B) {
+	private boolean isRed (int R, int G, int B) {
 		 if (R > G && R > B) {
 			 if (R > 50) {
 			     if (((float)G+(float)B) / ((float)R*2) < 0.75 ) {
@@ -187,16 +187,16 @@ public class ImgProcss extends Thread {
 			 }
 		 }
 		 return false;
-    }
+	}
 	private boolean isGreen (int R, int G, int B) {
 		 if (G > R && G > B) {
-			 if (G > 50) {
-			     if (((float)R+ (float)B) / ((float)G*2) < 0.75 ) {
-			    	 return true;
-			     }
-			 }
-		 }
-		 return false;
+			if (G > 50) {
+				if (((float)R+ (float)B) / ((float)G*2) < 0.75 ) {
+					 return true;
+				}
+			}
+		}
+		return false;
 	}
 	private boolean isBlue (int R, int G, int B) {
 
@@ -314,20 +314,6 @@ public class ImgProcss extends Thread {
 		if (wdw[3] > samplesY) wdw[3] = samplesY;
 		wClusters.add(wdw);
 		resizeClusters (wClusters);
-	}
-	private void createClusterK (int x, int y, int samplesX, int samplesY, int wdwSize,LinkedList<int[]> wClusters) {
-
-		int [] wdw = new int[4];
-
-		wdw[0] = x - wdwSize;
-		if (wdw[0] < 0) wdw[0] = 0;
-		wdw[1] = y - wdwSize;
-		if (wdw[1] < 0) wdw[1] = 0;
-		wdw[2] = x + wdwSize;
-		if (wdw[2] > samplesX) wdw[2] = samplesX;
-		wdw[3] = y + wdwSize;
-		if (wdw[3] > samplesY) wdw[3] = samplesY;
-		wClusters.add(wdw);
 	}
 	
 	private void selectClusters (LinkedList<int[]> wClusters,LinkedList<int[]> rClusters) {
@@ -493,10 +479,10 @@ public class ImgProcss extends Thread {
 		return (float)(h1 / Math.tan(w));
 	}
 	public int isRotating () {
-		// 0 not rotating
 		// -1 error
-		// 1 rotating CC
-		// 2 rotating CW
+		//  0 not rotating
+		//  1 rotating CC
+		//  2 rotating CW
 		int cX1,cX2,cX3;
 		
 		if (wKClusters.isEmpty()) return 0;

@@ -32,7 +32,7 @@ public class PID extends Thread {
 
 	
 	public PID (Parrot parrot) {
-        aRDrone = parrot;
+		aRDrone = parrot;
 	}
 	
 	private void Set () {
@@ -79,7 +79,14 @@ public class PID extends Thread {
 	//public void run() {
 	//    this.Set();
 		public void runPID (int rotating) {
-//			Log.i("xPosDes: "+xPosDes,"xPosAct: "+xPosAct);
+//			//		ARDRONE MOVEMENT
+			//x --> (+) right	(-) left
+			//y --> (+) back	(-) front
+			//z --> (+) up		(-) down
+			//r --> (+) cw		(-) cc
+			
+			
+			Log.i("xPosDes: "+xPosDes,"xPosAct: "+xPosAct);
 //			Log.i("zPosDes: "+zPosDes,"zPosAct: "+zPosAct);
 			dt = (SystemClock.uptimeMillis() - t) / 1000;
 			t = SystemClock.uptimeMillis(); 

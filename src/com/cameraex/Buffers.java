@@ -73,21 +73,21 @@ public class Buffers extends Thread {
 	}
 	
 	public void onPause() {
-	    synchronized (mPauseLock) {
-	    	mPID.setPIDEn();
-	        mPaused = true;
-	    }
+		synchronized (mPauseLock) {
+			mPID.setPIDEn();
+			mPaused = true;
+		}
 	}
 
 	public void onResume () {
-	    synchronized (mPauseLock) {
-	        mPaused = false;
-	        mPauseLock.notifyAll();
-	    }
+		synchronized (mPauseLock) {
+			mPaused = false;
+			mPauseLock.notifyAll();
+		}
 	}
 	
 	public boolean onPaused () {
-	    return mPaused; 
+		return mPaused; 
 	}
 	
 	public void run() {
@@ -118,11 +118,11 @@ public class Buffers extends Thread {
 				}
 			}
 			synchronized (mPauseLock) {
-			    while (mPaused) {
-			        try {
-			            mPauseLock.wait();
-			        } catch (InterruptedException e) {}
-			    }
+				while (mPaused) {
+					try {
+						mPauseLock.wait();
+					} catch (InterruptedException e) {}
+				}
 			}
 		}
 		Log.i("END THREAD","BUFFERS");
@@ -430,8 +430,8 @@ public class Buffers extends Thread {
 			bufParams.add(param);
 		}
 	}
-	
-	
+
+
 	public class params {
 		public float vX = 0;
 		public float vY = 0;
@@ -449,6 +449,4 @@ public class Buffers extends Thread {
 		if (x > max) return max;
 		return x;
 	}
-	    
-	
 }
