@@ -73,11 +73,11 @@ public class Slope {
 		if (stable2) {
 			if (signum(bufferSX.get(bufferSX.size() - 1)) != signum(slopeX)) { 
 				
-				for (Float xx : bufferSX) {
-					Log.i("slope_x: " + xx,"fdihwpsfiow");
-				}
-				Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
-				Log.i("slopeeeeeeeeeeeeeeee","slopeeeeeeeeeeeeeeeeeeeeee");
+				//for (Float xx : bufferSX) {
+				//	Log.i("slope_x: " + xx,"fdihwpsfiow");
+				//}
+				//Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
+				//Log.i("slopeeeeeeeeeeeeeeee","slopeeeeeeeeeeeeeeeeeeeeee");
 				if (xAcum > 300 || yAcum > 300) {
 					bufferSX.add(slopeX);bufferSY.add(slopeY);
 					bufferAX.add(xAcum);bufferAY.add(yAcum);
@@ -86,12 +86,12 @@ public class Slope {
 				}
 			}
 			if (signum(bufferSY.get(bufferSY.size() - 1)) != signum(slopeY)) {
-				for (Float xx : bufferSY) {
-					Log.i("slope_y: " + xx,"fdihwpsfiow");
-				}
-				Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
+			//	for (Float xx : bufferSY) {
+			//		Log.i("slope_y: " + xx,"fdihwpsfiow");
+			//	}
+			//	Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
 
-				Log.i("aaaaaaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaaaaaaaaaa");
+			//	Log.i("aaaaaaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaaaaaaaaaa");
 				if (xAcum > 300 || yAcum > 300) {
 					bufferSX.add(slopeX);bufferSY.add(slopeY);
 					bufferAX.add(xAcum);bufferAY.add(yAcum);
@@ -110,18 +110,18 @@ public class Slope {
 		}
 		if (update) {
 			xAcum = 0; yAcum = 0;n = 0;inX = x; inY = y;
-			Log.i("บบบบบบบบบบบบบบบบบบบบบบบ","บบบบบบบบบบบบบบบบบบบบบบบ");
-			Log.i("-----------------------","-----------------------");
-			Log.i("บบบบบบบบบบบบบบบบบบบบบบบ","บบบบบบบบบบบบบบบบบบบบบบบ");
+		//	Log.i("บบบบบบบบบบบบบบบบบบบบบบบ","บบบบบบบบบบบบบบบบบบบบบบบ");
+		//	Log.i("-----------------------","-----------------------");
+		//	Log.i("บบบบบบบบบบบบบบบบบบบบบบบ","บบบบบบบบบบบบบบบบบบบบบบบ");
 		}
 		return 1;
 	}
 
 	public int getSlopes (float x,float y) {
 		
-		for (int i = 0;i < bufferSX.size();i++) {
+/*		for (int i = 0;i < bufferSX.size();i++) {
 			if (signum(bufferSX.get(i)) > 0) {
-				Log.i ("x slope: ++","x slope: ++");
+			Log.i ("x slope: ++","x slope: ++");
 			} else {
 				Log.i ("x slope: --","x slope: --");
 			}
@@ -135,7 +135,7 @@ public class Slope {
 		for (Integer c : bufferLines) {
 			Log.i("object: " + c,"object: " + c);
 		}
-		Log.i("-----------------------","-----------------------");
+		Log.i("-----------------------","-----------------------");*/
 		avSlope (x,y);
 		return edges (x,y);
 	}
@@ -206,9 +206,9 @@ public class Slope {
 		if (sY == 0) return (int)signum(sX) * ((edges << 6) + 6);
 		m = Math.abs(sY / sX);
 
-		Log.i("--------","--------");
+	/*	Log.i("--------","--------");
 		Log.i("m: " + m,"m: " + m);
-		Log.i("--------","--------");
+		Log.i("--------","--------");*/
 		if (m > 0.4 && m < 5) {
 			if (sX < 0 && sY < 0) return (edges << 6) + 1;
 			if (sX < 0 && sY > 0) return (edges << 6) + 3;

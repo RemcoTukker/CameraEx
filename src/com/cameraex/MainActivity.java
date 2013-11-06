@@ -72,7 +72,8 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
 	private ImgProcss mImgProcss;
 	private CameraPreview mCameraPreview;
 	private DrawView mDrawView;
-	private int camResW=320,camResH=240,scale=3;
+	//1280x768 --> menu = 200 --> 1080
+	private int camResW=320,camResH=240,scale=3,mSH=742-camResH*scale,mSW=1080-camResW*scale;
 	FrameLayout mFrameLayout;
 	volatile float touched_x, touched_y;
 	private boolean mPIDIsRunning,loaded = false,connected = false,mBuffersIsRunning = false;
@@ -187,30 +188,29 @@ public class MainActivity extends Activity{/* implements SurfaceTextureListener{
 		touched_x = event.getRawX();
 		touched_y = event.getRawY();
 		if (touched_x > 1080) touched_x = 1080; 
-		touched_x -= 120;
+		touched_x -= mSW;
 		if (touched_x < 0) touched_x = 0;
 		if (touched_y > 742) touched_y = 742; 
-		touched_y -= 22;
+		touched_y -= mSH;
 		if (touched_y < 0) touched_y = 0;	
 		
 		switch (eventAction) {
 			case MotionEvent.ACTION_DOWN: 
 			// finger touches the screen
+				Log.i("ontouch","touchx: " + touched_x +" touchy: " + touched_y);
 				mPID.begin();
 				mSlope.onSet(touched_x, touched_y);
+				mImgProcss.setUpDate();
 				break;
 	
 			case MotionEvent.ACTION_MOVE:
 				// finger moves on the screen
-
 				mSlope.update(touched_x, touched_y);
 				break;
 	
 			case MotionEvent.ACTION_UP:   
 				// finger leaves the screen
-				
 				startBuffers (2, 5, 20, mSlope.getSlopes(touched_x, touched_y));
-				Log.i("info: "+mSlope.getSlopes(touched_x, touched_y),"wrfaee");
 				break;
 			default:
 				break;

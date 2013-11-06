@@ -25,7 +25,7 @@ public class CameraPreview extends SurfaceView  implements SurfaceHolder.Callbac
 	private Camera mCamera;
 	ImgProcss mImgProcss;
 	Bitmap newBmp;
-	private int camResW=320,camResH=240;
+	private int camResW=320,camResH=240,scale=3;
 	private boolean mImgProcIsRunning = false;
 
 	public CameraPreview(Context context, ImgProcss imgProcss) {
@@ -44,8 +44,6 @@ public class CameraPreview extends SurfaceView  implements SurfaceHolder.Callbac
 		try {
 			mCamera = Camera.open();
 			try {
-				Log.i("efwfw: ", "fwefwe ");
-
 				Camera.Parameters mparameters = mCamera.getParameters();
 				mparameters.setPreviewSize(camResW, camResH);
 				mparameters.setPreviewFormat(ImageFormat.NV21);
@@ -81,15 +79,16 @@ public class CameraPreview extends SurfaceView  implements SurfaceHolder.Callbac
 		} catch (Exception e){
 			Log.d("CameraView", "Error starting camera preview: " + e.getMessage());
 		}
-		}
+	}
 	public void onPause() {
 		if (mCamera != null){ mHolder.removeCallback(this); mHolder = null; mCamera.setPreviewCallback(null);mCamera.stopPreview();mCamera.release();mCamera = null;mImgProcss.Stop();mImgProcIsRunning = false; mImgProcss = null;}
 	}
 	@Override  
 	public void onPreviewFrame(byte[] data, Camera camera) {
 		if (mImgProcss.paused())
-		mImgProcss.Set(data,camResW,camResH,4);
+		mImgProcss.Set(data,camResW,camResH,5,scale);
 		startImgProc ();
+		data = null;
 		return;
 	}
 

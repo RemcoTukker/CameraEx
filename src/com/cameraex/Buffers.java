@@ -98,19 +98,22 @@ public class Buffers extends Thread {
 				t = SystemClock.uptimeMillis(); 
 				if (p3 > 0) figure = (p3 & 448) >> 6;
 				else figure = (p3 & 448) >> 6 ^ 7;
-				Log.i("figure: "+figure,"p3: "+p3);
+		//		Log.i("figure: "+figure,"p3: "+p3);
 				switch (figure) {
 					case 1:
-						if (line (p3)) this.onPause();
+						this.onPause();
 						break;
 					case 3:
-						if (triangle (p3)) this.onPause();
+						this.onPause();
 						break;
 					case 4:
-						if (square (p3)) this.onPause();
+						this.onPause();
 						break;
 					case 5:
-						if (lines (bufferLines)) this.onPause();
+						if (lines (bufferLines)){
+							mPID.setXPos(mPID.getXPos());
+							this.onPause();
+						}
 						break;
 					default:
 						this.onPause();
@@ -184,7 +187,7 @@ public class Buffers extends Thread {
 		}
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
-			if (aRDrone != null)
+			if (aRDrone != null) {}
 			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
 		} else {
 			if (bL.size() != 0) bufCreated = false;
@@ -293,7 +296,7 @@ public class Buffers extends Thread {
 		s = 0;direction =0;
 		for (int i = 0;i < 24;i ++) {
 			p = (i + s) % 24;
-			Log.i("p: "+p,"direction: "+ direction);
+		//	Log.i("p: "+p,"direction: "+ direction);
 			if (direction != 1) {
 				vX = squareCC[p*2];
 				vZ = squareCC[p*2+1];
@@ -313,7 +316,7 @@ public class Buffers extends Thread {
 		bufParams.clear();
 		
 		direction = info & 63;
-		Log.i("direction: "+direction,"esoqueso");
+	//	Log.i("direction: "+direction,"esoqueso");
 		//--------------
 		//   1 \ / 2
 		//   3 / \ 4
@@ -360,7 +363,7 @@ public class Buffers extends Thread {
 		s = 0;inv = 0;direction =0;
 		for (int i = 0;i < 18;i ++) {
 			p = (i + s) % 18;
-			Log.i("p: "+p,"direction: "+ direction);
+		//	Log.i("p: "+p,"direction: "+ direction);
 			if (direction != 1) {
 				vX = triangleCC[p*2];
 				vZ = triangleCC[p*2+1];
@@ -384,11 +387,11 @@ public class Buffers extends Thread {
 		bufParams.clear();
 		direction = info & 7;
 
-		Log.i("direction: " + direction,"ifhpaifgwhepif");
+//		Log.i("direction: " + direction,"ifhpaifgwhepif");
 		if (info < 0) {
 			direction = ((direction - 1) ^ 7) + 2;
 
-			Log.i("direction: " + direction,"egwoapEADJG");
+		//	Log.i("direction: " + direction,"egwoapEADJG");
 		}
 		for (int i = 0;i < 6;i ++) {
 			switch (direction) {
