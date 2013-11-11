@@ -2,37 +2,143 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity" >
+    tools:context=".MainActivity"
+    android:id ="@+id/background">
     
-	<FrameLayout
+    
+        <FrameLayout
      android:id="@+id/frameLayout"
      android:layout_width="match_parent"
      android:layout_height="match_parent"
      android:layout_margin="0dip"/>
-	
-    <LinearLayout
-        android:id="@+id/linearLayout1"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:orientation="vertical" >
 
-        <ToggleButton
-            android:id="@+id/takeOff"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:onClick="takeOff"
-            android:textOff="@string/button_Land"
-            android:textOn="@string/button_TakeOff" />
-        <Button
-            android:id="@+id/connectP"
-            android:layout_marginLeft="10dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/button_connect"
-            android:onClick="connectP" />
-    </LinearLayout>
+		<LinearLayout
+	android:id="@+id/linearLayout1"
+	        android:layout_width="match_parent"
+	        android:layout_height="match_parent"
+	        android:layout_alignParentBottom="true"
+	        android:layout_centerHorizontal="true"
+	        android:orientation="vertical" >
+
+				<LinearLayout
+			    	android:id="@+id/linearLayoutCP"
+				    android:layout_width="match_parent"
+				    android:layout_height="wrap_content" >
+
+					<Button
+					    android:id="@+id/connectP"
+					    android:layout_width="wrap_content"
+					    android:layout_height="wrap_content"
+					    android:layout_marginLeft="10dp"
+					    android:onClick="connectP"
+					    android:text="@string/button_connect" />
+
+					<ToggleButton
+					    android:id="@+id/takeOff"
+					    android:layout_width="wrap_content"
+					    android:layout_height="wrap_content"
+					    android:layout_marginLeft="10dp"
+					    android:onClick="takeOff"
+					    android:textOff="@string/button_Land"
+					    android:textOn="@string/button_TakeOff" />
+
+					<Button
+					    android:id="@+id/ChangeToBT"
+					    android:layout_width="wrap_content"
+					    android:layout_height="wrap_content"
+					    android:layout_marginLeft="10dp"
+					    android:onClick="toBlueTooth"
+				        android:text="@string/Bluetooth" />
+
+				</LinearLayout>
+
+				<LinearLayout
+			    	android:id="@+id/linearLayoutBT"
+				    android:layout_width="match_parent"
+				    android:layout_height="wrap_content" >
+
+				    <Button
+				        android:id="@+id/DeviceSearch"
+				        android:layout_width="wrap_content"
+				        android:layout_height="wrap_content"
+				        android:layout_marginLeft="10dp"
+				        android:onClick="DeviceSearch"
+				        android:text="@string/button_Search" />
+
+				    <Button
+				        android:id="@+id/CloseConnections"
+				        android:layout_width="wrap_content"
+				        android:layout_height="wrap_content"
+				        android:layout_marginLeft="10dp"
+				        android:onClick="CloseConnections"
+				        android:text="@string/button_Close" />
+
+				    <ToggleButton
+				        android:id="@+id/BluetoothOnOff"
+				        android:layout_width="wrap_content"
+				        android:layout_height="wrap_content"
+				        android:layout_marginLeft="10dp"
+				        android:onClick="BluetoothOnOff"
+				        android:textOff="@string/button_BluetoothOff"
+				        android:textOn="@string/button_BluetoothOn" />
+
+					<Button
+					    android:id="@+id/ChangeToCP"
+					    android:layout_width="wrap_content"
+					    android:layout_height="wrap_content"
+					    android:layout_marginLeft="10dp"
+					    android:onClick="toCameraPreview"
+				        android:text="@string/Camera_Preview" />
+				</LinearLayout>
+
+			<LinearLayout
+			    android:id="@+id/linearLayout2"
+			    android:layout_width="match_parent"
+			    android:layout_height="match_parent"
+			    android:orientation="vertical" >
+
+
+
+			    <ListView
+			        android:id="@+id/ListViewDetected"
+			        android:layout_width="match_parent"
+			        android:layout_height="61dp" >
+			    </ListView>
+
+			    <ListView
+			        android:id="@+id/ListViewPaired"
+			        android:layout_width="match_parent"
+			        android:layout_height="55dp" >
+			    </ListView>
+
+			    <LinearLayout
+			        android:id="@+id/linearLayout3"
+			        android:layout_width="match_parent"
+			        android:layout_height="0dp"
+			        android:layout_marginTop="15dp"
+			        android:layout_weight="0.48"
+			        android:orientation="horizontal" >
+
+			        <SeekBar
+			            android:id="@+id/AngleControl"
+			            android:layout_width="200dp"
+			            android:layout_height="wrap_content"
+			            android:layout_margin="10dp"
+			            android:max="180"
+			            android:progress="0"
+			            android:secondaryProgress="0" />
+
+			        <TextView
+			            android:id="@+id/Angle"
+			            android:layout_width="wrap_content"
+			            android:layout_height="wrap_content"
+			            android:layout_marginLeft="10dp"
+			            android:text="@string/txt_Angle"
+			            android:textColor="#00ccff" />
+			    </LinearLayout>
+			</LinearLayout>
+
+		</LinearLayout>
+
 
 </RelativeLayout>

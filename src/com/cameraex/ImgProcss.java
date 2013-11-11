@@ -13,7 +13,7 @@ import android.util.Log;
 /*
 * nexus 4
 * focal length :  (4.6 mm)
-* opening: f/2.4
+* opening: f/2.
 * sensor: 1/3.2" --> d = 4.6mm w = 3.7mm h = 2.8mm
 * vision angle = 2 * arctan (3.7 /2*4.6) = 52.53 degrees ///// 49
 */
@@ -35,7 +35,7 @@ public class ImgProcss extends Thread {
 	volatile private int mCamResW,mCamResH,N,IS,NIS;
 	
 	private Object mPauseLock = new Object();  
-	private boolean mPaused = true, upDate = true;;
+	private boolean mPaused = true, upDate = true,threadRunning = false;
 	private Object mU = new Object();
 	
 	public ImgProcss (DrawView drawView, PID pid) {
@@ -44,25 +44,34 @@ public class ImgProcss extends Thread {
 		wKClusters	= new LinkedList<int[]>();
 		mDrawView   = drawView;
 		mPID		= pid;
+		threadRunning = false;
 		mPaused		= true;
 		upDate		= true;
 	}
 	
 	public void Set (byte[] data,int resW,int resH,int n,int is) {
-		mData = data;
-		wGClusters.clear();
-		wBClusters.clear();
-		wKClusters.clear();
-		mCamResW = resW;
-		mCamResH = resH;
-		N = n;								//Subsampling
-		IS = is;							//Image Scale
-		NIS = N * IS;
-		running = true;
+		synchronized (mPauseLock) {
+			if (mPaused) {
+				mData = data;
+				wGClusters.clear();
+				wBClusters.clear();
+				wKClusters.clear();
+				mCamResW = resW;					//Camera width resolution
+				mCamResH = resH;					//Camera height resolution
+				N = n;								//Subsampling, Nº samples --> (width * height) / N  
+				IS = is;							//Image Scale
+				NIS = N * IS;
+				running = true;
+				if (!threadRunning) this.start();
+				this.onResume();
+				threadRunning = true;
+			}
+		}
 	}
 	
 	public void Stop () {
 		running = false;
+		threadRunning = false;
 	}
 	
 	public void onPause() {
@@ -85,10 +94,8 @@ public class ImgProcss extends Thread {
 		
 		while (running) {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			YuvImage yuv = new YuvImage(mData, ImageFormat.NV21, mCamResW, mCamResH, null);
-			mData = null;
+			YuvImage yuv = new YuvImage(mData, ImageFormat.NV21, mCamResW, mCamResH, null); 
 			yuv.compressToJpeg(new Rect(0, 0, mCamResW, mCamResH), 100, out);
-			yuv = null;
 			byte[] bytes = out.toByteArray();
 			mBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
 			mBitmap = mBitmap.copy(Bitmap.Config.ARGB_8888, true);
@@ -273,7 +280,7 @@ public class ImgProcss extends Thread {
 	}
 	
 	private boolean findAdyacentK (int x,int y, int samplesX, int samplesY,int wdwSize,LinkedList<int[]> wClusters,LinkedList<int[]> rClusters) {
-		int i = 0,j = 0, posX, posY;																//Working in samples
+		int i = 0,j = 0, posX, posY;		//Working in samples
 		int[] colors = new int[3];
 		//	-	-	- 	-	-
 		//	-	o	x	o	x

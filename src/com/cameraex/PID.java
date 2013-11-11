@@ -1,12 +1,11 @@
 package com.cameraex;
 
-import robots.parrot.ctrl.Parrot;
 import android.os.SystemClock;
 import android.util.Log;
 
 public class PID extends Thread { 
-	/*Drone*/
-	static Parrot aRDrone = null;
+	
+	private Buffers mBuffers = null;
 	/*Control*/
 	private volatile float 	xP = 0, xI =  0, xD = 0, xPID, yP = 0, yI =  0, yD = 0, yPID, zP = 0, zI =  0, zD = 0, zPID; 
 	private volatile float 	xKP = 0, xKI =  0, xKD = 0, yKP = 0, yKI =  0, yKD = 0, zKP = 0, zKI =  0, zKD = 0;
@@ -21,20 +20,20 @@ public class PID extends Thread {
 	/*Time*/
 	private volatile float 	t, dt;
 	
-	private Object mPauseLock = new Object();
 	private Object mX = new Object();
 	private Object mY = new Object();
 	private Object mZ = new Object();
 	private Object mEPID = new Object();
 	
-	private boolean enabledPID;
+	private boolean enabledPID,PIDSet;
 	// Constructor stuff.      
 
 	// This should be after your drawing/update code inside your thread's run() code.
 
 	
-	public PID (Parrot parrot) {
-		aRDrone = parrot;
+	public PID (Buffers buffers) {
+		mBuffers = buffers;
+		PIDSet = false;
 	}
 	
 	private void Set () {
@@ -47,27 +46,21 @@ public class PID extends Thread {
 		xKP = 0.8f; xKI =  0.0f; xKD = 0.15f;
 		yKP = 0.8f; yKI =  0.0f; yKD = 0.1f;//0.05f;
 		zKP = 0.9f; zKI =  0.0f; zKD = 0.22f;
-		xN = 1000f; yN = 550f; zN = 230f; //y(550)
+		xN = 1000f; yN = 650f; zN = 230f; //x (1000) y(550)
 		xP = 0; xI =  0; xD = 0; 
 		yP = 0; yI =  0; yD = 0;
 		zP = 0; zI =  0; zD = 0;
 		Alpha = 0.4f;
 		step = 0;
+		yPosDes = 140;
 		t = SystemClock.uptimeMillis();
+		PIDSet = true;
 	}
 	
 	public void onPause() {
-	    /*synchronized (mPauseLock) {
-	        mPaused = true;
-	    }*/
 		this.Set();
 	}
 
-	public void begin () {
-		this.Set();
-		circle (0);
-		yPosDes = 140;
-	}
 	//public void run() {
 	//    this.Set();
 		public boolean runPID (int rotating) {
@@ -76,16 +69,15 @@ public class PID extends Thread {
 			//y --> (+) back	(-) front
 			//z --> (+) up		(-) down
 			//r --> (+) cw		(-) cc
-						
+			if (!PIDSet) this.Set ();	
 			dt = (SystemClock.uptimeMillis() - t) / 1000;
-			Log.i("time","dt: " + dt);
-			if (dt < 0.4) return false;
+			//Log.i("time","dt: " + dt);
+			if (dt < 0.5) return false;
 			t  =  SystemClock.uptimeMillis();
 			/*----------------------------------------------------------------------*
 			 * 									XPID								*
 			 *----------------------------------------------------------------------*/
 			synchronized (mX) {
-				xPosDes = 150;
 				if (xPosAct > 0 && xPosDes > 0) {					// Parrot detected and set
 					if (avXPos < 0) avXPos = xPosAct;				// Parrot was not detected or set
 					if (stable) {									// Time is stable
@@ -141,7 +133,8 @@ public class PID extends Thread {
 						zI += zKI * zError * dt;					// Integral
 						zD  = zKD * ((zError - zPrevError) / dt);	// Derivative
 					}
-					zPID = within ((zP + zI + zD) / zN,-0.08f,0.08f,-0.01f,0.01f);	// (-)!!!
+					zPID = round((zP + zI + zD) / zN, 100);
+					zPID = within (zPID,-0.1f,0.1f,-0.01f,0.01f);
 					if (Math.abs(zError) < 20) zPID = 0;
 					zPrevError = zError;
 				} else {
@@ -149,21 +142,22 @@ public class PID extends Thread {
 				}
 			}
 			Log.i("BeforeCommand", "|rotating: " + rotating+" | xPID: " + xPID + " | yPID: " +yPID);
+			//Time has been stabilized and quadcopter is not executing a motion buffer
 			if (enabledPID && stable) {
 				switch (rotating){
 				case -1:
 					if (xPID != 0 || yPID != 0)
-					aRDrone.executeMoveCompose(xPID,yPID,0, 0f);
+					mBuffers.onSet(xPID, yPID, 0, 0, 64, null);
 					break;
 				case 0:
 					if (xPID != 0 || yPID != 0)
-					aRDrone.executeMoveCompose(xPID,yPID,0, 0f);
+					mBuffers.onSet(xPID, yPID, 0, 0, 64, null);
 					break;
 				case 1:
-					aRDrone.executeMoveCompose(0, 0, 0,  0.5f);
+					mBuffers.onSet(0, 0, 0, 0.4f, 64, null);
 					break;
 				case 2:
-					aRDrone.executeMoveCompose(0, 0, 0, -0.5f);
+					mBuffers.onSet(0, 0, 0, -0.4f, 64, null);
 					break;
 				default:
 					break;
@@ -255,10 +249,10 @@ public class PID extends Thread {
 		if (x < 0) return -1; else return 1; 
 	}*/
 	
-	public void circle (double t) {
+	/*public void circle (double t) {
 		xPosDes = 130f + (float)(20*Math.cos((t*Math.PI)/180));
 		zPosDes = 60f + (float)(20*Math.sin((t*Math.PI)/180));
-	}
+	}*/
 	
 	
 	public float LPF (float a,float b, float c) {

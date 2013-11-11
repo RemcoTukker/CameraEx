@@ -17,13 +17,14 @@ public class Buffers extends Thread {
 	
 	
 	static Parrot aRDrone = null;
-	static PID	mPID = null;
-	private float t,dt,p1,p2;
-	private int p3;
+	private PID mPID = null;
+	private float t,dt,p1,p2,p3,p4;
+	private int p5;
 	private int figure;
 	private LinkedList<params> bufParams = new LinkedList<params>();
-	private Object mPauseLock = new Object();  
-	private boolean mPaused,  mRunning ,bufCreated;
+	private Object mPauseLock = new Object();
+	private Object mSet = new Object();
+	private boolean mPaused,  mRunning ,bufCreated,threadRunning = false;
 	private float[] squareCC = new float[] { 	0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f, 0.00f, 0.40f,
 											   -0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f,-0.15f, 0.00f, 0.25f,-0.40f,
 												0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f, 0.00f,-0.40f,
@@ -48,37 +49,48 @@ public class Buffers extends Thread {
 	private ArrayList<Integer> bufferLines = new ArrayList<Integer>();
 	
 	
-	public Buffers (Parrot parrot, PID pid) {
-        aRDrone = parrot;
-        mPID	= pid;
+	public Buffers (Parrot parrot) {
+		aRDrone = parrot;
 		mRunning = true;
-		mPaused  = false;
+		mPaused  = true;
 		bufCreated = false;
+		threadRunning = false;
 	}
-
-	public void Set (int fig, float a, float b, int c, ArrayList<Integer> aL) {
-		mPID.clearPIDEn();
-		figure = fig;
-		p1 = a;
-		p2 = b;
-		p3 = c; 
-		bufferLines = aL; 
-		mRunning = true;
-		mPaused  = false;
-		bufCreated = false;
+	
+	public void setPID (PID pid) {
+		mPID = pid;
+	}
+	
+	public void onSet (float a, float b, float c, float d, int fig, ArrayList<Integer> aL) {
+		synchronized (mSet) {	
+			synchronized (mPauseLock) {
+				if (mPaused) {
+					p1 = a; p2 = b; p3 = c; p4 = d;
+					p5 = fig; 
+					bufferLines = aL;
+					mRunning	= true;
+					bufCreated	= false;
+					if (!threadRunning) this.start();
+					this.onResume();
+					threadRunning = true;
+				}
+			}
+		}
 	}
 	
 	public void onStop () {
-		mRunning = false;
+		synchronized (mSet) {
+			mRunning = false;
+			threadRunning = false;
+		}
 	}
 	
 	public void onPause() {
 		synchronized (mPauseLock) {
-			mPID.setPIDEn();
 			mPaused = true;
 		}
 	}
-
+	
 	public void onResume () {
 		synchronized (mPauseLock) {
 			mPaused = false;
@@ -96,12 +108,12 @@ public class Buffers extends Thread {
 			dt = SystemClock.uptimeMillis() - t;
 			if (dt > 140) {
 				t = SystemClock.uptimeMillis(); 
-				if (p3 > 0) figure = (p3 & 448) >> 6;
-				else figure = (p3 & 448) >> 6 ^ 7;
-		//		Log.i("figure: "+figure,"p3: "+p3);
+				if (p5 > 0) figure = (p5 & 448) >> 6;
+				else figure = (p5 & 448) >> 6 ^ 7;
 				switch (figure) {
-					case 1:
-						this.onPause();
+					case 1: //Normal movement
+						if (movement (p1,p2,p3,p4,2)) this.onPause();
+						if (t > 40) t -= 40;	// To speed up the process
 						break;
 					case 3:
 						this.onPause();
@@ -109,9 +121,11 @@ public class Buffers extends Thread {
 					case 4:
 						this.onPause();
 						break;
-					case 5:
+					case 5: //Figure drawing using lines
+						mPID.clearPIDEn();
 						if (lines (bufferLines)){
 							mPID.setXPos(mPID.getXPos());
+							mPID.setPIDEn();
 							this.onPause();
 						}
 						break;
@@ -141,7 +155,7 @@ public class Buffers extends Thread {
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
 			if (aRDrone != null)
-			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
+			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
 			return false;
 		} else {
 			return true;
@@ -156,7 +170,7 @@ public class Buffers extends Thread {
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
 			if (aRDrone != null)
-			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
+			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
 			return false;
 		} else {
 			return true;
@@ -171,7 +185,7 @@ public class Buffers extends Thread {
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
 			if (aRDrone != null)
-			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
+			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
 			return false;
 		} else {
 			return true;
@@ -187,8 +201,8 @@ public class Buffers extends Thread {
 		}
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
-			if (aRDrone != null) {}
-			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
+			if (aRDrone != null)
+			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
 		} else {
 			if (bL.size() != 0) bufCreated = false;
 			else return true;
@@ -204,7 +218,7 @@ public class Buffers extends Thread {
 		if (!bufParams.isEmpty()) {
 			params param = bufParams.removeFirst();
 			if (aRDrone != null)
-			aRDrone.executeMoveCompose(param.vX,mPID.getYPID(),param.vZ,0);
+			aRDrone.executeMoveCompose(param.vX,0,param.vZ,0);
 			return false;
 		} else {
 			return true;
@@ -240,7 +254,7 @@ public class Buffers extends Thread {
 			} else {
 				vX = 0.1f; vZ = 0.3f;
 			}
-			params param = new params(vX,0,vZ);
+			params param = new params(vX,0,vZ,0);
 			bufParams.add(param);
 		}
 	}
@@ -304,7 +318,27 @@ public class Buffers extends Thread {
 				vX = squareCW[p*2];
 				vZ = squareCW[p*2+1];
 			}
-			params param = new params(vX,0,vZ);
+			params param = new params(vX,0,vZ,0);
+			bufParams.add(param);
+		}
+	}
+	
+	private boolean movement (float vX, float vY, float vZ, float vW, int nCommands) {
+		if (!bufCreated) { 
+			bufMove (vX,vY,vZ,vW,nCommands);
+			bufCreated = true;
+		}
+		if (!bufParams.isEmpty()) {
+			params param = bufParams.removeFirst();
+			if (aRDrone != null)
+			aRDrone.executeMoveCompose(param.vX,param.vY,param.vZ,param.vW);
+		} else { return true;}
+		return false;
+	}
+	
+	public void bufMove (float vX, float vY, float vZ, float vW, int nCommands) {
+		for (int i=0;i < nCommands;i++) {
+			params param = new params(vX,vY,vZ,vW);
 			bufParams.add(param);
 		}
 	}
@@ -375,7 +409,7 @@ public class Buffers extends Thread {
 				vX = -vX;
 				vZ = -vZ;
 			}
-			params param = new params(vX,0,vZ);
+			params param = new params(vX,0,vZ,0);
 			bufParams.add(param);
 		}
 	}
@@ -387,11 +421,8 @@ public class Buffers extends Thread {
 		bufParams.clear();
 		direction = info & 7;
 
-//		Log.i("direction: " + direction,"ifhpaifgwhepif");
 		if (info < 0) {
 			direction = ((direction - 1) ^ 7) + 2;
-
-		//	Log.i("direction: " + direction,"egwoapEADJG");
 		}
 		for (int i = 0;i < 6;i ++) {
 			switch (direction) {
@@ -429,7 +460,7 @@ public class Buffers extends Thread {
 			default:
 				break;
 			}
-			params param = new params(vX,0,vZ);
+			params param = new params(vX,0,vZ,0);
 			bufParams.add(param);
 		}
 	}
@@ -439,11 +470,13 @@ public class Buffers extends Thread {
 		public float vX = 0;
 		public float vY = 0;
 		public float vZ = 0;
+		public float vW = 0;
 	
-		public params (float a, float b, float c) {
+		public params (float a, float b, float c, float d) {
 			vX = a;
 			vY = b;
 			vZ = c;
+			vW = d;
 		}
 	}
 	

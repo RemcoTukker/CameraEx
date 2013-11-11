@@ -72,12 +72,6 @@ public class Slope {
 		slopeY = signum(sSlopeY) * (slopeY / bufferY.size());
 		if (stable2) {
 			if (signum(bufferSX.get(bufferSX.size() - 1)) != signum(slopeX)) { 
-				
-				//for (Float xx : bufferSX) {
-				//	Log.i("slope_x: " + xx,"fdihwpsfiow");
-				//}
-				//Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
-				//Log.i("slopeeeeeeeeeeeeeeee","slopeeeeeeeeeeeeeeeeeeeeee");
 				if (xAcum > 300 || yAcum > 300) {
 					bufferSX.add(slopeX);bufferSY.add(slopeY);
 					bufferAX.add(xAcum);bufferAY.add(yAcum);
@@ -86,12 +80,6 @@ public class Slope {
 				}
 			}
 			if (signum(bufferSY.get(bufferSY.size() - 1)) != signum(slopeY)) {
-			//	for (Float xx : bufferSY) {
-			//		Log.i("slope_y: " + xx,"fdihwpsfiow");
-			//	}
-			//	Log.i("xAcum: "+xAcum,"yAcum: "+yAcum);
-
-			//	Log.i("aaaaaaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaaaaaaaaaa");
 				if (xAcum > 300 || yAcum > 300) {
 					bufferSX.add(slopeX);bufferSY.add(slopeY);
 					bufferAX.add(xAcum);bufferAY.add(yAcum);
