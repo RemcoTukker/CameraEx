@@ -14,5 +14,6 @@
 	<string name="button_Close">AClose</string>
 	<string name="button_BluetoothOff">Disabled</string>
 	<string name="button_BluetoothOn">Enabled</string>
-
+	<string name="updateReferences">Update</string>
+	
 </resources>

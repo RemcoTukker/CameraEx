@@ -11,7 +11,7 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
- 
+
 public class CameraPreview extends SurfaceView  implements SurfaceHolder.Callback ,PreviewCallback{
 
 	private SurfaceHolder mHolder;
@@ -25,8 +25,6 @@ public class CameraPreview extends SurfaceView  implements SurfaceHolder.Callbac
 		mHolder = getHolder();
 		mHolder.addCallback(this);
 		mImgProcss = imgProcss;
-		Log.i("CAMERAPREVIEW","ESO");
-
 	}
 
 	public void surfaceCreated(SurfaceHolder holder) {
@@ -72,8 +70,9 @@ public class CameraPreview extends SurfaceView  implements SurfaceHolder.Callbac
 			Log.d("CameraView", "Error starting camera preview: " + e.getMessage());
 		}
 	}
+	
 	public void onPause() {
-		if (mCamera != null){ mHolder.removeCallback(this); mHolder = null; mCamera.setPreviewCallback(null);mCamera.stopPreview();mCamera.release();mCamera = null;mImgProcss.Stop(); mImgProcss = null;}
+		if (mCamera != null){ mHolder.removeCallback(this); mHolder = null; mCamera.setPreviewCallback(null);mCamera.stopPreview();mCamera.release();mCamera = null;mImgProcss.onStop(); mImgProcss = null;}
 	}
 	public void onResume(ImgProcss imgProcss) {
 		// Install a SurfaceHolder.Callback so we get notified when the

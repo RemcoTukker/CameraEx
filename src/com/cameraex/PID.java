@@ -39,20 +39,23 @@ public class PID extends Thread {
 	private void Set () {
 		enabledPID  = true;
 		stable		= false;
-		xError 	 	= 0; yError 	= 0; zError 	= 0;
+		xError		= 0; yError 	= 0; zError 	= 0;
 		xPrevError	= 0; yPrevError	= 0; zPrevError	= 0;
 		xPosAct = -1; xPosDes = -1; yPosAct = -1; yPosDes = -1; zPosAct = -1; zPosDes = -1;
 		avXPos = -1; avYPos = -1;; avZPos = -1;
 		xKP = 0.8f; xKI =  0.0f; xKD = 0.15f;
-		yKP = 0.8f; yKI =  0.0f; yKD = 0.1f;//0.05f;
+		//yKP = 0.8f; yKI =  0.0f; yKD = 0.1f;//0.05f; without structure
+		yKP = 0.9f; yKI =  0.0f; yKD = 0.1f;//0.05f;
 		zKP = 0.9f; zKI =  0.0f; zKD = 0.22f;
-		xN = 1000f; yN = 650f; zN = 230f; //x (1000) y(550)
+		//xN = 1000f; yN = 650f; zN = 230f;  //without structure
+		xN = 1000f; yN = 435f; zN = 230f;
 		xP = 0; xI =  0; xD = 0; 
 		yP = 0; yI =  0; yD = 0;
 		zP = 0; zI =  0; zD = 0;
 		Alpha = 0.4f;
 		step = 0;
-		yPosDes = 140;
+		xPosDes = 150;
+		yPosDes = 120;
 		t = SystemClock.uptimeMillis();
 		PIDSet = true;
 	}
@@ -71,7 +74,6 @@ public class PID extends Thread {
 			//r --> (+) cw		(-) cc
 			if (!PIDSet) this.Set ();	
 			dt = (SystemClock.uptimeMillis() - t) / 1000;
-			//Log.i("time","dt: " + dt);
 			if (dt < 0.5) return false;
 			t  =  SystemClock.uptimeMillis();
 			/*----------------------------------------------------------------------*
@@ -88,11 +90,13 @@ public class PID extends Thread {
 						xD  = xKD * ((xError - xPrevError) / dt);	// Derivative
 					}
 					xPID = round((xP + xI + xD) / xN, 100);
-					xPID = within (xPID,-0.1f,0.1f,-0.01f,0.01f);
+					//xPID = within (xPID,-0.1f,0.1f,-0.01f,0.01f);	//without strcuture
+					xPID = within (xPID,-0.12f,0.12f,-0.03f,0.03f);
 					if (Math.abs(xError) < 15) 	xPID = 0;		
 					Log.i("xPID","|xPosAct = "+xPosAct+" |avXPos = "+avXPos+" |xPosDes = "+xPosDes+" |xP = "+xP+" |xI = "+xI+" |xD = "+xD+" |xPID = "+xPID);
 					xPrevError = xError;
 				} else {
+					Log.i("xPID","|xPosAct = "+xPosAct+" |xPosdes = "+xPosDes);
 					xPID	= 0;
 					avXPos	= -1;									//Parrot not detected or set
 				}
@@ -111,11 +115,13 @@ public class PID extends Thread {
 						yD  = yKD * ((yError - yPrevError) / dt);	// Derivative
 					}
 					yPID = round((yP + yI + yD) / yN, 100);
-					yPID = -within (yPID,-0.1f,0.1f,-0.01f,0.01f);	// (-)!!!
+					//yPID = -within (yPID,-0.1f,0.1f,-0.01f,0.01f);	// (-)!!! without structure
+					yPID = -within (yPID,-0.1f,0.12f,-0.03f,0.03f);	// (-)!!!
 					if (Math.abs(yError) < 20) yPID = 0;
 					Log.i("yPID","|yPosAct = "+yPosAct+" |avYPos = "+avYPos+" |yPosDes = "+yPosDes+" |yP = "+yP+" |yI = "+yI+" |yD = "+yD+" |yPID = "+yPID);
 					yPrevError = yError;
 				} else {
+					Log.i("yPID","|yPosAct = "+yPosAct+" |yPosdes = "+yPosDes);
 					yPID	= 0;
 					avYPos	= -1;									//Parrot not detected or set
 				}
@@ -146,12 +152,18 @@ public class PID extends Thread {
 			if (enabledPID && stable) {
 				switch (rotating){
 				case -1:
-					if (xPID != 0 || yPID != 0)
+					if (xPID != 0 || yPID != 0){
+					//if (xPID > 0) xPID = 0.10f; else if (xPID < 0) xPID = -0.06f;
+					//if (yPID > 0) yPID = 0.07f; else if (yPID < 0) yPID = -0.07f;
 					mBuffers.onSet(xPID, yPID, 0, 0, 64, null);
+					}
 					break;
 				case 0:
-					if (xPID != 0 || yPID != 0)
+					if (xPID != 0 || yPID != 0){
+					//if (xPID > 0) xPID = 0.06f; else if (xPID < 0) xPID = -0.06f;
+					//if (yPID > 0) yPID = 0.07f; else if (yPID < 0) yPID = -0.07f;
 					mBuffers.onSet(xPID, yPID, 0, 0, 64, null);
+					}
 					break;
 				case 1:
 					mBuffers.onSet(0, 0, 0, 0.4f, 64, null);

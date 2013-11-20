@@ -2,7 +2,6 @@ package com.cameraex;
 
 import java.util.ArrayList;
 
-import robots.parrot.ctrl.Parrot;
 import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -32,7 +31,6 @@ public class MainActivity extends Activity {
 	
 	private Buffers mBuffers;
 	
-	static Parrot aRDrone;
 	private BluetoothCore mBluetoothCore;
 	private PID mPID;
 	private Slope mSlope;
@@ -48,15 +46,15 @@ public class MainActivity extends Activity {
 	private OnSeekBar	onSeekBar = null;
     private SeekBar		angleViewControl  = null;
 	/* ---------------Bluetooth Constants---------------*/
-	private final int	BTERROR 			  = 0;
-//W	private final int	BTDISCOVER_FINISHED   = 1;
-	private final int	BTENABLED			  = 2;
-	private final int	BTDISABLED			  = 3;
-	private final int	BTDEVICE_FOUND 		  = 4;
-	private final int	BTDEVICE_BOND		  = 5;
-	private final int	BTDEVICE_UNBOND		  = 6;
-	private final int	BTDEVICE_CONNECTED	  = 7;
-	private final int	BTDEVICE_DISCONNECTED = 8;
+	private final int	BTERROR					= 0;
+//W	private final int	BTDISCOVER_FINISHED		= 1;
+	private final int	BTENABLED				= 2;
+	private final int	BTDISABLED				= 3;
+	private final int	BTDEVICE_FOUND 			= 4;
+	private final int	BTDEVICE_BOND			= 5;
+	private final int	BTDEVICE_UNBOND			= 6;
+	private final int	BTDEVICE_CONNECTED		= 7;
+	private final int	BTDEVICE_DISCONNECTED	= 8;
 
 	private ArrayAdapter<String>		btArrayDetected;						//Array Adapter storing Bluetooth detected devices
 	private ArrayAdapter<String>		btArrayPaired;							//Array Adapter storing Bluetooth paired devices
@@ -92,18 +90,14 @@ public class MainActivity extends Activity {
 			mFrameLayout	= (FrameLayout)findViewById(R.id.frameLayout);
 			mBluetoothCore	= new BluetoothCore ();
 			mBluetoothCore.btCoreCreate(this);
-			aRDrone			= new Parrot ();
-			mBuffers		= new Buffers (aRDrone);
+			mBuffers		= new Buffers (this);
 			mPID			= new PID (mBuffers);
 			mBuffers.setPID (mPID);
 			mDrawView		= new DrawView(this,camResW,camResH,scale);
 			mImgProcss		= new ImgProcss (mDrawView, mPID);
 			mCameraPreview	= new CameraPreview(this, mImgProcss);
-			Log.i("POSTCAMERAPREV","ESO");
 
 			mFrameLayout.addView(mCameraPreview);
-			Log.i("POSTFRAMELAY","ESO");
-
 			mFrameLayout.addView(mDrawView);
 			mSlope			= new Slope ();
 			loaded			= true;
@@ -133,31 +127,42 @@ public class MainActivity extends Activity {
 					bReceiverOn = true;
 				}
 			}
-			hideCameraPreview ();
 		}
-
+		hideCameraPreview ();
 	}
 
 	protected void onPause() {
 		super.onPause();
+		clearCameraPreview ();
+		clearPID ();
+		clearBuffers ();
+		clearImageProcessing ();
+		clearBluetooth ();
+		loaded = false;
+	}
+	
+	public void clearImageProcessing () {
+		mImgProcss = null;
+	}
+	
+	public void clearBuffers () {
+		if (mBuffers != null) {
+			mBuffers.onDestroy();
+			mBuffers = null;
+		}
+	}
+	
+	public void clearCameraPreview () {
 		if (mCameraPreview != null){
 			mCameraPreview.onPause();
 			mCameraPreview = null;
 		}
-		if (mPID != null)
-		mPID = null;
-		if (aRDrone != null) {
-			aRDrone.destroy();
-			aRDrone = null;
-		}
-		if (mBuffers != null) {
-			mBuffers.onStop();
-			mBuffers = null;
-		}
-		mImgProcss = null;
-		clearBluetooth ();
-		loaded = false;
 	}
+	
+	public void clearPID () {
+		if (mPID != null) mPID = null;
+	}
+	
 	public void clearBluetooth () {		
 		if (mBluetoothCore != null) {
 			if (bReceiverOn) {
@@ -188,10 +193,9 @@ public class MainActivity extends Activity {
 		View v = findViewById(R.id.takeOff);
 		boolean on = ((ToggleButton) v).isChecked();
 		if (on) {
-			aRDrone.takeOff ();
+			mBuffers.parrotTakeOff ();
 		}else{
-			mPID.onPause();
-			aRDrone.land();
+			mBuffers.parrotLand();
 		}
 	}
 	
@@ -206,7 +210,11 @@ public class MainActivity extends Activity {
 		v.setVisibility(0);
 		View v1 = findViewById(R.id.linearLayoutCP);
 		v1.setVisibility(4);
-		onBluetooth = false;
+		View v2 = findViewById(R.id.Angle);
+		v2.setVisibility(0);
+		View v3 = findViewById(R.id.AngleControl);
+		v3.setVisibility(0);
+		onBluetooth = true;
 	}
 	
 	public void showCameraPreview () {
@@ -219,13 +227,14 @@ public class MainActivity extends Activity {
 		v.setVisibility(4);
 		View v1 = findViewById(R.id.linearLayoutCP);
 		v1.setVisibility(0);
-		onBluetooth = true;
+		View v2 = findViewById(R.id.Angle);
+		v2.setVisibility(4);
+		View v3 = findViewById(R.id.AngleControl);
+		v3.setVisibility(4);
+		onBluetooth = false;
 	}
 	public void connectP (View view) {
-		/*if (!aRDrone.m_bConnected) {
-			aRDrone.connect();
-		}*/
-		//mFrameLayout.setBackgroundColor(Color.BLACK);
+		mBuffers.parrotConnect();
 	}
 	/* Touch Screen event */ 
 	public boolean onTouchEvent(MotionEvent event) {
@@ -245,8 +254,6 @@ public class MainActivity extends Activity {
 				// finger touches the screen
 				if (mSlope != null)
 				mSlope.onSet(touched_x, touched_y);
-				if (mImgProcss != null)
-				mImgProcss.setUpDate();
 				break;
 			case MotionEvent.ACTION_MOVE:
 				// finger moves on the screen
@@ -269,7 +276,7 @@ public class MainActivity extends Activity {
 		mBuffers.onSet(0, 0, 0, 0,buf,mSlope.getBufferLines());
 	}
 
-	private void writeServoMotor (int mAngle) {
+	public void writeServoMotor (int mAngle) {
 		if (mBluetoothCore != null) {
 			byte[] buffer = new byte[3];
 			buffer[0] = 115; //s
@@ -298,10 +305,10 @@ public class MainActivity extends Activity {
 		public void onStopTrackingTouch(SeekBar seekBar) {
 			if (angle != prevAngle)
 			writeServoMotor (angle);
-			Log.i("angle","Angle: " + angle +" prevAngle: " + prevAngle);
 			prevAngle = angle;
 		}
 	}
+	
 	
 	private class ActionChanged extends BroadcastReceiver {
 		@Override
@@ -361,6 +368,11 @@ public class MainActivity extends Activity {
 	public void CloseConnections (View view) {
 		if (mBluetoothCore != null)
 		mBluetoothCore.btCoreCloseAllConnections ();    
+	}
+	/*Updates references*/
+	public void UpdateReferences (View view) {
+		if (mImgProcss != null)
+		mImgProcss.setUpDate();
 	}
 	/*Enable Bluetooth Button*/
 	public void BluetoothOnOff (View view) {

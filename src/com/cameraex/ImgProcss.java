@@ -33,6 +33,7 @@ public class ImgProcss extends Thread {
 	volatile private float pXcm = -1;
 	volatile private Bitmap mBitmap;
 	volatile private int mCamResW,mCamResH,N,IS,NIS;
+	volatile private int stX,stY,edX,edY,startX, startY, endX, endY;
 	
 	private Object mPauseLock = new Object();  
 	private boolean mPaused = true, upDate = true,threadRunning = false;
@@ -61,17 +62,21 @@ public class ImgProcss extends Thread {
 				N = n;								//Subsampling, Nº samples --> (width * height) / N  
 				IS = is;							//Image Scale
 				NIS = N * IS;
-				running = true;
-				if (!threadRunning) this.start();
-				this.onResume();
-				threadRunning = true;
+				startTread ();
 			}
 		}
 	}
 	
-	public void Stop () {
-		running = false;
-		threadRunning = false;
+	public void startTread () {
+		running = true;
+		if (!threadRunning) this.start();
+		this.onResume();
+		threadRunning = true;
+	}
+	
+	public void onStop () {
+		running 		= false;
+		threadRunning 	= false;
 	}
 	
 	public void onPause() {
@@ -116,18 +121,22 @@ public class ImgProcss extends Thread {
 	}
 	
 	private void Sampling () {
-		int i, samples, samplesY, samplesX,x=0,y=0,samplesY2, samplesX2;
+		int i, samples, samplesY, samplesX,x=0,y=0,samplesY2, samplesX2,startXPixels;
 		int[] colors = new int[3];
 		double height,width;
 
-
 		height = mBitmap.getHeight(); width = mBitmap.getWidth();
 	//	mDrawView.mBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-		samples  = (int)Math.ceil((height * width) / N);
-		samplesX = (int)Math.ceil(width / N); samplesX2 = samplesX -1;
-		samplesY = (int)Math.ceil(height / N); samplesY2 = samplesY -1;
-		y = 0;
-		 
+		samplesX = (int)Math.ceil(width / N); samplesX2 = samplesX - 1;
+		samplesY = (int)Math.ceil(height / N); samplesY2 = samplesY - 1;
+		
+		windowSampling (9, samplesX, samplesY);											//Resizing window sampling size
+		samplesX = endX - startX;
+		samplesY = endY - startY;
+		samples = samplesX * samplesY;
+		startXPixels = startX * N; 
+		x = startXPixels;
+		y = startY * N;
 		for (i = 1;i < samples;i++) {
 			getPixel(x,y,mBitmap,colors);			 
 			if (isChecked (colors[0],colors[1],colors[2])){
@@ -138,42 +147,72 @@ public class ImgProcss extends Thread {
 					findAdyacent (x/N,y/N,samplesX2, samplesY2,2,wBClusters);
 				}
 			}
-			if (i%samplesX != 0) { x += N; } else { x = 0;y += N; i += (N - 1)*samplesX; }
+			if (i%samplesX != 0) { x += N; } else { x = startXPixels; y += N;}
 		}
+
 		selectClusters (wKClusters,wGClusters);
 		mBitmap.recycle();
-
-		synchronized(mDrawView.gRectangles) {
-			if (mDrawView.gRectangles != null) {
-				mDrawView.gRectangles.clear();
-				for (i = 0;i < wGClusters.size();i++) {
-					 mDrawView.gRectangles.add(new Rect(wGClusters.get(i)[0]*NIS,wGClusters.get(i)[1]*NIS,wGClusters.get(i)[2]*NIS,wGClusters.get(i)[3]*NIS));
-				}
-			}
-		}
-		synchronized(mDrawView.bRectangles) {
-			if (upDate) {
-				if (mDrawView.bRectangles != null) {
-					mDrawView.bRectangles.clear();
-					for (i = 0;i < wBClusters.size();i++) {
-						mDrawView.bRectangles.add(new Rect(wBClusters.get(i)[0]*NIS,wBClusters.get(i)[1]*NIS,wBClusters.get(i)[2]*NIS,wBClusters.get(i)[3]*NIS));
-					}
-				}
-			}
-		}
-		synchronized(mDrawView.kRectangles) {
-			if (mDrawView.kRectangles != null) {
-				mDrawView.kRectangles.clear();
-				for (i = 0;i < wKClusters.size();i++) {
-					mDrawView.kRectangles.add(new Rect(wKClusters.get(i)[0]*NIS,wKClusters.get(i)[1]*NIS,wKClusters.get(i)[2]*NIS,wKClusters.get(i)[3]*NIS));
-				}
-			}
-		}
+		/* Draw rectangles on the camera preview view*/
+		drawGreenRectangles ();
+		drawBlueRectangles ();
+		drawBlackRectangles ();
 		pXcm = pixelsXcm();
 		mPID.setxPosAct(xPositionCm ());
 		mPID.setyPosAct(yPositionCm ());
 		mPID.setzPosAct(zPositionCm ());
 		mPID.runPID(isRotating ());
+	}
+	
+	private boolean windowSampling (int wdwSize, int samplesX, int samplesY) {
+		startX = 0; startY = 0;
+		endX = samplesX; endY = samplesY;
+
+		if (upDate) return false;
+		if (stX < 0 || stY < 0 || edY < 0 || edY < 0) return false;
+		
+		startX = stX - wdwSize;
+		if (startX < 0) startX = 0;
+		endX = edX + wdwSize;
+		if (endX > samplesX) endX = samplesX;
+		startY = stY - wdwSize;
+		if (startY < 0) startY = 0;
+		endY = edY + wdwSize;
+		if (endY > samplesY) endY = samplesY;
+		
+		return true;
+	}
+	
+	private void drawGreenRectangles () {
+		synchronized(mDrawView.gRectangles) {
+			if (mDrawView.gRectangles != null) {
+				mDrawView.gRectangles.clear();
+				for (int i = 0;i < wGClusters.size();i++) {
+					 mDrawView.gRectangles.add(new Rect(wGClusters.get(i)[0]*NIS,wGClusters.get(i)[1]*NIS,wGClusters.get(i)[2]*NIS,wGClusters.get(i)[3]*NIS));
+				}
+			}
+		}
+	}
+	private void drawBlueRectangles () {
+		synchronized(mDrawView.bRectangles) {
+			if (upDate) {
+				if (mDrawView.bRectangles != null) {
+					mDrawView.bRectangles.clear();
+					for (int i = 0;i < wBClusters.size();i++) {
+						mDrawView.bRectangles.add(new Rect(wBClusters.get(i)[0]*NIS,wBClusters.get(i)[1]*NIS,wBClusters.get(i)[2]*NIS,wBClusters.get(i)[3]*NIS));
+					}
+				}
+			}
+		}
+	}
+	private void drawBlackRectangles () {
+		synchronized(mDrawView.kRectangles) {
+			if (mDrawView.kRectangles != null) {
+				mDrawView.kRectangles.clear();
+				for (int i = 0;i < wKClusters.size();i++) {
+					mDrawView.kRectangles.add(new Rect(wKClusters.get(i)[0]*NIS,wKClusters.get(i)[1]*NIS,wKClusters.get(i)[2]*NIS,wKClusters.get(i)[3]*NIS));
+				}
+			}
+		}
 	}
 	private void getPixel (int x, int y,Bitmap bitmap,int[] colors) {
 		int pixel =  bitmap.getPixel(x, y);
@@ -397,7 +436,7 @@ public class ImgProcss extends Thread {
 	}
 	private float pixelsXcm () {
 		int cX1,cX2;
-		
+		float value;
 		if (wBClusters.size() != 2) {
 			if (pXcm < 0) {
 				return -1;
@@ -407,7 +446,12 @@ public class ImgProcss extends Thread {
 			cX1 = (wBClusters.get(0)[0] + wBClusters.get(0)[2]) >> 1;
 			cX2 = (wBClusters.get(1)[0] + wBClusters.get(1)[2]) >> 1;
 			synchronized (mU) { upDate = false; }
-			return round((float)(Math.abs(cX1 - cX2) * NIS) / 125,1000); 	   
+			
+			value =	round((float)(Math.abs(cX1 - cX2) * NIS) / 125,1000);
+			if (value > 3 && value < 5) 
+			return value;
+			else
+			return 4;
 		}
 	}
 	private float xPositionCm () {
@@ -439,15 +483,26 @@ public class ImgProcss extends Thread {
 	}
 	private float objectSize () {
 		int cX1,cX2,cY1,cY2;
-		float x,y,h;
+		float h,x,y;
 		
 		if (wGClusters.size() != 2) {
-			return -1;
+			stX = -1; edX = -1; stY = -1; edY = -1;
+			return - 1;
 		} else {
 			cX1 = (wGClusters.get(0)[0] + wGClusters.get(0)[2]) >> 1;
 			cX2 = (wGClusters.get(1)[0] + wGClusters.get(1)[2]) >> 1;
 			cY1 = (wGClusters.get(0)[1] + wGClusters.get(0)[3]) >> 1;
 			cY2 = (wGClusters.get(1)[1] + wGClusters.get(1)[3]) >> 1;
+			if (wGClusters.get(0)[0] > wGClusters.get(1)[0]) {
+				stX = wGClusters.get(1)[0]; edX = wGClusters.get(0)[2];
+			} else {
+				stX = wGClusters.get(0)[0]; edX = wGClusters.get(1)[2];
+			}
+			if (wGClusters.get(0)[1] > wGClusters.get(1)[1]) {
+				stY = wGClusters.get(1)[1]; edY = wGClusters.get(0)[3];
+			} else {
+				stY = wGClusters.get(0)[1]; edY = wGClusters.get(1)[3];
+			}
 			x = cX1 - cX2;
 			y = cY1 - cY2;
 			h = (float)Math.sqrt(x*x + y*y) * NIS;
@@ -472,7 +527,7 @@ public class ImgProcss extends Thread {
 		float hSensor;
 		double alpha;
 
-		hSensor = (objectSize() * 2.8f) / imageWSize ();							//Image size projected on the sensor
+		hSensor = (objectSize () * 2.8f) / imageWSize ();							//Image size projected on the sensor
 		alpha = 2 * Math.atan(hSensor / (9.2f * ((hSensor / 12.245f) + 1)));		//Alpha (degrees) sen/cos
 		return (float)(12.245f / Math.tan(alpha));									//Finding the distance knowing the angle and the object size
 	}

@@ -29,9 +29,9 @@ public final class R {
 		public static final int timepicker_up_selected = 0x7f02001d;
 	}
 	public static final class id {
-		public static final int decrement = 0x7f090024;
-		public static final int increment = 0x7f090026;
-		public static final int timepicker_input = 0x7f090025;
+		public static final int decrement = 0x7f090025;
+		public static final int increment = 0x7f090027;
+		public static final int timepicker_input = 0x7f090026;
 	}
 	public static final class layout {
 		public static final int number_picker = 0x7f030004;

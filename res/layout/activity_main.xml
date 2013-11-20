@@ -48,7 +48,15 @@
 					    android:layout_height="wrap_content"
 					    android:layout_marginLeft="10dp"
 					    android:onClick="toBlueTooth"
-				        android:text="@string/Bluetooth" />
+				        android:text="@string/Bluetooth" />	
+					<Button
+					    android:id="@+id/UpdateReferences"
+					    android:layout_width="wrap_content"
+					    android:layout_height="wrap_content"
+					    android:layout_marginLeft="10dp"
+					    android:onClick="UpdateReferences"
+				        android:text="@string/updateReferences" />
+					
 
 				</LinearLayout>
 

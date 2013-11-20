@@ -57,6 +57,8 @@ public class BluetoothCore {
 	private ConnectThread						connectThread 		= null;
 	public Intent								btCoreIntent		= null;
 	Context										Gcontext			= null;
+	private Object mSockets = new Object();
+	private static Object mInfo = new Object();
 	
 	/****************************************************
 	-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
@@ -98,10 +100,20 @@ public class BluetoothCore {
 			Gcontext.unregisterReceiver (btBroadcastReceiver);																//Unregistering brodadcast receiver.
 			btBroadcastReceiver = null;
 		}
+		if (btListDetected != null)
+		btListDetected.clear();
+		if (btListPaired != null)
+		btListPaired.clear();
+		if (btSockets != null)
+		btSockets.clear();
+		if (btInfoDevices != null)
+		btInfoDevices.clear();
+		if (btQueueDev != null)
+		btQueueDev.clear();
 	}
 
 	/*Method to ask for the needed bluetoothCore Resources*/
-	public void btCoreResume () {																								
+	public void btCoreResume () {
 		if (btBroadcastReceiver == null) {
 			btBroadcastReceiver = new btCoreActionChanged();																//Registering the broadcast receiver and initializing filters.
 			Gcontext.registerReceiver(btBroadcastReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
@@ -126,26 +138,30 @@ public class BluetoothCore {
 
 	/*Method to extract an element of certain bluetooth reception queue*/
 	public String btCoreGetQueueElement (BluetoothDevice btDevice) {
-		String macAddress = btDevice.getAddress ();
-		if (!btInfoDevices.isEmpty()) {																							//Queues Hash table is not empty.
-			if (btInfoDevices.containsKey (macAddress)) {																		//Queues Hash table contains this Mac Address.
-				if (!btInfoDevices.get (macAddress).isEmpty ()) {																//Queue is not empty.
-					return btInfoDevices.get(macAddress).remove ();																//Returning element. 
+		synchronized (mInfo) {
+			String macAddress = btDevice.getAddress ();
+			if (!btInfoDevices.isEmpty()) {																							//Queues Hash table is not empty.
+				if (btInfoDevices.containsKey (macAddress)) {																		//Queues Hash table contains this Mac Address.
+					if (!btInfoDevices.get (macAddress).isEmpty ()) {																//Queue is not empty.
+						return btInfoDevices.get(macAddress).remove ();																//Returning element. 
+					}
 				}
 			}
+			return null;
 		}
-		return null;
 	}
 
 	/*Method to add an element to certain bluetooth reception queue*/
 	static void btCoreQueueWrite (String data) {																				//String structure: [information][$][mac_address]
 		int addStart = data.indexOf ('$');																						//Searching the [$] index.
-		if (addStart != -1) {																									//[$] exists in the string.
-			String macAddress = data.substring (addStart + 1);																	//Extracting Mac Address.
-			String information = data.substring (0,addStart);																	//Extracting Information.
-			if (!btInfoDevices.isEmpty ()) {																					//Queues Hash table is not empty.
-				if (btInfoDevices.containsKey(macAddress)) {																	//Queues Hash table contains this Mac Address.
-					btInfoDevices.get(macAddress).add(information);																//Writing the information in the queue.
+		synchronized (mInfo) {
+			if (addStart != -1) {																									//[$] exists in the string.
+				String macAddress = data.substring (addStart + 1);																	//Extracting Mac Address.
+				String information = data.substring (0,addStart);																	//Extracting Information.
+				if (!btInfoDevices.isEmpty ()) {																					//Queues Hash table is not empty.
+					if (btInfoDevices.containsKey(macAddress)) {																	//Queues Hash table contains this Mac Address.
+						btInfoDevices.get(macAddress).add(information);																//Writing the information in the queue.
+					}
 				}
 			}
 		}
@@ -177,17 +193,19 @@ public class BluetoothCore {
 
 	/*Method to List all connected bluetooth devices*/
 	public ArrayList<BluetoothDevice> btCoreGetConnectedDevices () {															
-		if (bluetoothAdapter != null && bluetoothAdapter.isEnabled ()) {														//Bluetooth Adapter exists and it's enabled.
-			if (!btSockets.isEmpty ()) {																						//Sockets Hash table is not empty.
-				ArrayList<BluetoothDevice> 	btListConnected = new ArrayList<BluetoothDevice> ();								//Creating a new array to store all the Connected devices.
-				Enumeration<BluetoothDevice> btDevices = btSockets.keys ();														//Extracting all connected devices. 	
-				while (btDevices.hasMoreElements ()) {																			//Storing connected devices in the array.
-					btListConnected.add(btDevices.nextElement ());
+		synchronized (mSockets) {
+			if (bluetoothAdapter != null && bluetoothAdapter.isEnabled ()) {														//Bluetooth Adapter exists and it's enabled.
+				if (!btSockets.isEmpty ()) {																						//Sockets Hash table is not empty.
+					ArrayList<BluetoothDevice> 	btListConnected = new ArrayList<BluetoothDevice> ();								//Creating a new array to store all the Connected devices.
+					Enumeration<BluetoothDevice> btDevices = btSockets.keys ();														//Extracting all connected devices. 	
+					while (btDevices.hasMoreElements ()) {																			//Storing connected devices in the array.
+						btListConnected.add(btDevices.nextElement ());
+					}
+					return btListConnected;
 				}
-				return btListConnected;
 			}
+			return null;
 		}
-		return null;
 	}
 
 	/*Method to extract a certain Detected bluetooth device from the detected list*/
@@ -219,15 +237,17 @@ public class BluetoothCore {
 
 	/*Method to send a message to the connected bluetooth device*/
 	public void btCoreSendMessage (byte[] Message, BluetoothDevice btDevice) {
-		if (bluetoothAdapter != null && bluetoothAdapter.isEnabled ()) {														//Bluetooth Adapter exists and it's enabled.
-			if (bluetoothAdapter.isDiscovering ())																				//Cancelling the bluetooth devices discovering.
-			bluetoothAdapter.cancelDiscovery ();
-			if (!btSockets.isEmpty ()) {																						//Socket Hash table is not empty.
-				if (btSockets.containsKey (btDevice)) {																			//Socket Hash table contains that device, so it's connected.
-					try {
-						WriteThread writeThread = new WriteThread (btSockets.get(btDevice),Message);							//Creating a new Writing thread to send a message to the connected device.
-						writeThread.start ();																					//Starting the Writing thread.
-					}catch (Exception e) {e.printStackTrace ();}
+		synchronized (mSockets) {
+			if (bluetoothAdapter != null && bluetoothAdapter.isEnabled ()) {														//Bluetooth Adapter exists and it's enabled.
+				if (bluetoothAdapter.isDiscovering ())																				//Cancelling the bluetooth devices discovering.
+				bluetoothAdapter.cancelDiscovery ();
+				if (!btSockets.isEmpty ()) {																						//Socket Hash table is not empty.
+					if (btSockets.containsKey (btDevice)) {																			//Socket Hash table contains that device, so it's connected.
+						try {
+							WriteThread writeThread = new WriteThread (btSockets.get(btDevice),Message);							//Creating a new Writing thread to send a message to the connected device.
+							writeThread.start ();																					//Starting the Writing thread.
+						}catch (Exception e) {e.printStackTrace ();}
+					}
 				}
 			}
 		}
@@ -292,47 +312,50 @@ public class BluetoothCore {
 
 	/*Method to unbond the selected device*/
 	public Boolean btCoreUnBond (BluetoothDevice btDevice) {
-		if (bluetoothAdapter != null && bluetoothAdapter.isEnabled ()) {														//Bluetooth Adapter exists and it's enabled.
-			if (bluetoothAdapter.isDiscovering ())																				//Cancelling the bluetooth devices discovering.
-			bluetoothAdapter.cancelDiscovery ();
-			try {
-				if (!btListPaired.isEmpty ()) {																					//List of paired bluetooth devices is not empty.
-					if (btListPaired.contains(btDevice)) {																		//List of paired bluetooth devices contains the device to unbond.
-						if (!btSockets.isEmpty ()) {																			//Socket Hash table is not empty.
-							if (btSockets.containsKey (btDevice)) {																//Socket Hash table contains that device, so the device is connected.
-								if (!CloseSocket (btSockets.get (btDevice),btDevice)) {											//Closing the connection.  					
+		synchronized (mSockets) {
+			if (bluetoothAdapter != null && bluetoothAdapter.isEnabled ()) {														//Bluetooth Adapter exists and it's enabled.
+				if (bluetoothAdapter.isDiscovering ())																				//Cancelling the bluetooth devices discovering.
+				bluetoothAdapter.cancelDiscovery ();
+				try {
+					if (!btListPaired.isEmpty ()) {																					//List of paired bluetooth devices is not empty.
+						if (btListPaired.contains(btDevice)) {																		//List of paired bluetooth devices contains the device to unbond.
+							if (!btSockets.isEmpty ()) {																			//Socket Hash table is not empty.
+								if (btSockets.containsKey (btDevice)) {																//Socket Hash table contains that device, so the device is connected.
+									if (!CloseSocket (btSockets.get (btDevice),btDevice))											//Closing the connection.  					
 									return false;
 								}
 							}
+							removeBond (btDevice);																					//Unbonding device.				
 						}
-						removeBond (btDevice);																					//Unbonding device.				
 					}
-				}
-			} catch (Exception e) {e.printStackTrace (); return false;}															
+				} catch (Exception e) {e.printStackTrace (); return false;}															
+			}
+			return true;
 		}
-		return true;
 	}
 
 	/*Method to create a connection between bonded device*/
 	public Boolean btCoreConnect (BluetoothDevice btDevice) {
-		if (bluetoothAdapter != null && bluetoothAdapter.isEnabled ()) {														//Bluetooth Adapter exists and it's enabled.
-			if (bluetoothAdapter.isDiscovering ()) {																			//Cancelling the bluetooth devices discovering.
-				bluetoothAdapter.cancelDiscovery ();
-			}
-			if (!btSockets.isEmpty ()) {																						//Socket Hash table is not empty.																					
-				if (btSockets.containsKey (btDevice)) {																			//Socket Hash table contains that device, so the device is already connected.
-					if (btSockets.get (btDevice) != null) {																		//The socket exists, the connection process is aborted..
-						return false;																							
-					}else{
-						btSockets.remove (btDevice);																			//The socket doesn't exists, removing object from Hash table.
+		synchronized (mSockets) {
+			if (bluetoothAdapter != null && bluetoothAdapter.isEnabled ()) {														//Bluetooth Adapter exists and it's enabled.
+				if (bluetoothAdapter.isDiscovering ()) {																			//Cancelling the bluetooth devices discovering.
+					bluetoothAdapter.cancelDiscovery ();
+				}
+				if (!btSockets.isEmpty ()) {																						//Socket Hash table is not empty.																					
+					if (btSockets.containsKey (btDevice)) {																			//Socket Hash table contains that device, so the device is already connected.
+						if (btSockets.get (btDevice) != null) {																		//The socket exists, the connection process is aborted..
+							return false;																							
+						}else{
+							btSockets.remove (btDevice);																			//The socket doesn't exists, removing object from Hash table.
+						}
 					}
 				}
+				connectThread = new ConnectThread (btDevice);																		//Creating a new connection thread to connect the device.
+				connectThread.start ();																								//Starting the connection thread.												
+				return true;
 			}
-			connectThread = new ConnectThread (btDevice);																		//Creating a new connection thread to connect the device.
-			connectThread.start ();																								//Starting the connection thread.												
-			return true;
+			return false;
 		}
-		return false;
 	}
 
 	/****************************************************
@@ -392,8 +415,8 @@ public class BluetoothCore {
 				Thread.currentThread().setName("ConnectThread");
 				try {
 					threadSocket.connect ();
-					synchronized (BluetoothCore.this) {
-					btSockets.put(threadDevice, threadSocket);
+					synchronized (mSockets) {
+						btSockets.put(threadDevice, threadSocket);
 					}
 				} catch (IOException e) {Log.e(Thread.currentThread().getName(),"Connection Error",e);
 					try {
@@ -434,7 +457,9 @@ public class BluetoothCore {
 			try {
 				IS = btSocket.getInputStream();
 				btQueueDev = new LinkedList<String>();
-				btInfoDevices.put(btDevice.getAddress(), btQueueDev);
+				synchronized (mInfo) {
+					btInfoDevices.put(btDevice.getAddress(), btQueueDev);
+				}
 				threadbtDevice = btDevice;
 			} catch (IOException e) {
 				Log.e("ReadWriteThread", "temp sockets not created", e);
@@ -523,14 +548,16 @@ public class BluetoothCore {
 
 	/*Closses all opened InputStreams/OutputStreams and sockets, resets handlerIdentifier"*/
 	private Boolean CloseAllConnections () {
-		Enumeration<BluetoothDevice> Devices = btSockets.keys(); 
-		while (Devices.hasMoreElements()) {
-			BluetoothDevice auxDev = Devices.nextElement();
-			BluetoothSocket auxSock = btSockets.get(auxDev);
-			if (!CloseSocket (auxSock,auxDev))
-			return false;
+		synchronized (mSockets) {
+			Enumeration<BluetoothDevice> Devices = btSockets.keys(); 
+			while (Devices.hasMoreElements()) {
+				BluetoothDevice auxDev = Devices.nextElement();
+				BluetoothSocket auxSock = btSockets.get(auxDev);
+				if (!CloseSocket (auxSock,auxDev))
+				return false;
+			}
+			return true;
 		}
-		return true;
 	}
 
 	private Boolean CloseSocket (BluetoothSocket btSocket, BluetoothDevice btDevice) {
@@ -550,7 +577,9 @@ public class BluetoothCore {
 					try {btSocket.close();} catch (Exception e) {Log.e("Closing sockets","Socket Error",e);return false;}
 					btSocket = null;
 					btSockets.remove(btDevice);
-					btInfoDevices.remove(btDevice.getAddress());
+					synchronized (mInfo) {
+						btInfoDevices.remove(btDevice.getAddress());
+					}
 					SendBroadcast(BTDEVICE_DISCONNECTED);
 
 					return true;
