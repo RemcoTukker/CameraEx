@@ -11,9 +11,9 @@ public class PID extends Thread {
 	private volatile float 	xKP = 0, xKI =  0, xKD = 0, yKP = 0, yKI =  0, yKD = 0, zKP = 0, zKI =  0, zKD = 0;
 	private volatile float 	xN = 0, yN =  0, zN = 0;
 	private volatile float	xError = 0, xPrevError = 0, yError = 0, yPrevError = 0, zError = 0, zPrevError = 0;
-	private volatile float	xPosAct = -1, xPosDes = -1, yPosAct = -1, yPosDes = -1, zPosAct = -1, zPosDes = -1;
+	private volatile float	xPosDes = -1, yxPosDes = -1, yPosDes = -1, zPosDes = -1;
 	volatile float signum,Alpha = 0.4f;
-	volatile float avXPos,avYPos,avZPos;
+	volatile float avxPos,avyPos,avzPos;
 	volatile double step = 0;
 	/*Flags*/
 	private volatile  boolean stable = false;
@@ -41,25 +41,28 @@ public class PID extends Thread {
 		stable		= false;
 		xError		= 0; yError 	= 0; zError 	= 0;
 		xPrevError	= 0; yPrevError	= 0; zPrevError	= 0;
-		xPosAct = -1; xPosDes = -1; yPosAct = -1; yPosDes = -1; zPosAct = -1; zPosDes = -1;
-		avXPos = -1; avYPos = -1;; avZPos = -1;
+		xPosDes = -1; yPosDes = -1; zPosDes = -1;
+		avxPos = -1; avyPos = -1;; avzPos = -1;
 		xKP = 0.8f; xKI =  0.0f; xKD = 0.15f;
 		//yKP = 0.8f; yKI =  0.0f; yKD = 0.1f;//0.05f; without structure
 		yKP = 0.9f; yKI =  0.0f; yKD = 0.1f;//0.05f;
 		zKP = 0.9f; zKI =  0.0f; zKD = 0.22f;
 		//xN = 1000f; yN = 650f; zN = 230f;  //without structure
-		xN = 1000f; yN = 435f; zN = 230f;
+		//xN = 1000f; yN = 435f; zN = 230f;  //No proportional
+		xN = 875f; yN = 500f; zN = 230f; 
 		xP = 0; xI =  0; xD = 0; 
 		yP = 0; yI =  0; yD = 0;
 		zP = 0; zI =  0; zD = 0;
 		Alpha = 0.4f;
 		step = 0;
-		xPosDes = 150;
-		yPosDes = 120;
+		setNewxPosDes (60,100);
+		yPosDes = 100;
 		t = SystemClock.uptimeMillis();
 		PIDSet = true;
 	}
-	
+	//v1: 850 500 230 0.45 0.10(Buf) + / -
+	//v1: 875 500 230 0.40 0.08(Buf)
+
 	public void onPause() {
 		this.Set();
 	}
@@ -72,148 +75,186 @@ public class PID extends Thread {
 			//y --> (+) back	(-) front
 			//z --> (+) up		(-) down
 			//r --> (+) cw		(-) cc
-			if (!PIDSet) this.Set ();	
+			float timeoutCommand = 0.48f;
+			
+			if (!PIDSet) this.Set ();
 			dt = (SystemClock.uptimeMillis() - t) / 1000;
-			if (dt < 0.5) return false;
-			t  =  SystemClock.uptimeMillis();
 			/*----------------------------------------------------------------------*
 			 * 									XPID								*
 			 *----------------------------------------------------------------------*/
 			synchronized (mX) {
-				if (xPosAct > 0 && xPosDes > 0) {					// Parrot detected and set
-					if (avXPos < 0) avXPos = xPosAct;				// Parrot was not detected or set
+				if (avxPos > 0) {									// Parrot detected and set
 					if (stable) {									// Time is stable
-						avXPos = ALPF (xPosAct,avXPos,Alpha);		// Filtering position 
-						xError = xPosDes - avXPos;					// Error
+						xError = proportionalE (xPosDes,avxPos);
+						//xError = xPosDes - avxPos;					// Error
 						xP  = xError * xKP;							// Proportional
 						xI += xKI * xError * dt;					// Integral
 						xD  = xKD * ((xError - xPrevError) / dt);	// Derivative
 					}
-					xPID = round((xP + xI + xD) / xN, 100);
+					xPID = round((xP + xI + xD) / xN, 1000);
 					//xPID = within (xPID,-0.1f,0.1f,-0.01f,0.01f);	//without strcuture
-					xPID = within (xPID,-0.12f,0.12f,-0.03f,0.03f);
-					if (Math.abs(xError) < 15) 	xPID = 0;		
-					Log.i("xPID","|xPosAct = "+xPosAct+" |avXPos = "+avXPos+" |xPosDes = "+xPosDes+" |xP = "+xP+" |xI = "+xI+" |xD = "+xD+" |xPID = "+xPID);
+					xPID = within (xPID,-0.03f,0.03f,-0.01f,0.01f);
+					if (Math.abs(xError) < 15) 	xPID = 0;
+					if (dt >= timeoutCommand)
+					Log.i("xPID","|xError = "+xError+" |avXPos = "+avxPos+" |xPosDes = "+xPosDes+" |xP = "+xP+" |xI = "+xI+" |xD = "+xD+" |xPID = "+xPID);
 					xPrevError = xError;
 				} else {
-					Log.i("xPID","|xPosAct = "+xPosAct+" |xPosdes = "+xPosDes);
+					if (dt >= timeoutCommand)
+					Log.i("xPID","|avXPos = "+avxPos+" |xPosdes = "+xPosDes);
 					xPID	= 0;
-					avXPos	= -1;									//Parrot not detected or set
 				}
 			}
 			/*----------------------------------------------------------------------*
 			 * 									YPID								*
 			 *----------------------------------------------------------------------*/
 			synchronized (mY) {
-				if (yPosAct > 0 && yPosDes > 0) {					// Parrot detected and set
-					if (avYPos < 0) avYPos = xPosAct;				// Parrot was not detected or set
-					if (stable && Math.abs(yPosAct) < 300) {		// Time is stable
-						avYPos = ALPF (yPosAct,avYPos,Alpha);		// Filtering position 
-						yError = yPosDes - avYPos;					// Error
+				if (avyPos > 0) {									// Parrot detected and set
+					if (stable) {									// Time is stable
+						yError = proportionalE (yPosDes,avyPos);
 						yP  = yKP * yError;							// Proportional
 						yI += yKI * yError * dt;					// Integral
 						yD  = yKD * ((yError - yPrevError) / dt);	// Derivative
 					}
-					yPID = round((yP + yI + yD) / yN, 100);
+					yPID = round((yP + yI + yD) / yN, 1000);
 					//yPID = -within (yPID,-0.1f,0.1f,-0.01f,0.01f);	// (-)!!! without structure
-					yPID = -within (yPID,-0.1f,0.12f,-0.03f,0.03f);	// (-)!!!
-					if (Math.abs(yError) < 20) yPID = 0;
-					Log.i("yPID","|yPosAct = "+yPosAct+" |avYPos = "+avYPos+" |yPosDes = "+yPosDes+" |yP = "+yP+" |yI = "+yI+" |yD = "+yD+" |yPID = "+yPID);
+					yPID = -within (yPID,-0.03f,0.03f,-0.01f,0.01f);	// (-)!!!
+					if (Math.abs(yError) < 15) yPID = 0;
+					if (dt >= timeoutCommand)
+					Log.i("yPID","|yError = "+yError+" |avYPos = "+avyPos+" |yPosDes = "+yPosDes+" |yP = "+yP+" |yI = "+yI+" |yD = "+yD+" |yPID = "+yPID);
 					yPrevError = yError;
 				} else {
-					Log.i("yPID","|yPosAct = "+yPosAct+" |yPosdes = "+yPosDes);
+					if (dt >= timeoutCommand)
+					Log.i("yPID","|avyPos = "+avyPos+" |yPosdes = "+yPosDes);
 					yPID	= 0;
-					avYPos	= -1;									//Parrot not detected or set
 				}
 			}
 			/*----------------------------------------------------------------------*
 			 * 									ZPID								*
 			 *----------------------------------------------------------------------*/
 			synchronized (mZ) {
-				if (zPosAct > 0 && zPosDes > 0) {					// Parrot detected and set
-					if (avZPos < 0) avZPos = zPosAct;				// Parrot was not detected or set
+				if (avzPos > 0) {									// Parrot detected and set
 					if (stable) {									// Time is stable
-						avZPos = ALPF (zPosAct,avZPos,Alpha);		// Filtering position 
-						zError = yPosDes - avYPos;					// Error
+						zError = proportionalE (zPosDes,avzPos);
 						zP  = zKP * zError;							// Proportional
 						zI += zKI * zError * dt;					// Integral
 						zD  = zKD * ((zError - zPrevError) / dt);	// Derivative
 					}
 					zPID = round((zP + zI + zD) / zN, 100);
 					zPID = within (zPID,-0.1f,0.1f,-0.01f,0.01f);
-					if (Math.abs(zError) < 20) zPID = 0;
+					if (Math.abs(zError) < 10) zPID = 0;
 					zPrevError = zError;
 				} else {
-					avZPos = -1;									//Parrot not detected or set
+					zPID	= 0;
 				}
 			}
-			Log.i("BeforeCommand", "|rotating: " + rotating+" | xPID: " + xPID + " | yPID: " +yPID);
+			stable = true;
+			if (dt < timeoutCommand) return false;
+			t  =  SystemClock.uptimeMillis();
+			
 			//Time has been stabilized and quadcopter is not executing a motion buffer
 			if (enabledPID && stable) {
 				switch (rotating){
 				case -1:
-					if (xPID != 0 || yPID != 0){
-					//if (xPID > 0) xPID = 0.10f; else if (xPID < 0) xPID = -0.06f;
-					//if (yPID > 0) yPID = 0.07f; else if (yPID < 0) yPID = -0.07f;
-					mBuffers.onSet(xPID, yPID, 0, 0, 64, null);
-					}
+					if (yPID != 0) {		mBuffers.onSet(0, yPID, 0, 0, 64, null);
+					} else if (xPID != 0) {	mBuffers.onSet(xPID, 0, 0, 0, 64, null); }
+					//mBuffers.onSet(xPID, yPID, 0, 0, 64, null);
 					break;
 				case 0:
-					if (xPID != 0 || yPID != 0){
-					//if (xPID > 0) xPID = 0.06f; else if (xPID < 0) xPID = -0.06f;
-					//if (yPID > 0) yPID = 0.07f; else if (yPID < 0) yPID = -0.07f;
-					mBuffers.onSet(xPID, yPID, 0, 0, 64, null);
-					}
+					if (yPID != 0) {		mBuffers.onSet(0, yPID, 0, 0, 64, null);
+					} else if (xPID != 0) {	mBuffers.onSet(xPID, 0, 0, 0, 64, null); }
+					//mBuffers.onSet(xPID, yPID, 0, 0, 64, null);
 					break;
 				case 1:
+					Log.i("ROTATING", "ROTATING");
 					mBuffers.onSet(0, 0, 0, 0.4f, 64, null);
 					break;
 				case 2:
+					Log.i("ROTATING", "ROTATING");
 					mBuffers.onSet(0, 0, 0, -0.4f, 64, null);
 					break;
 				default:
 					break;
 				}
 			}
-			stable = true;
+			Log.i("-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-", "-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.- " + dt);
+
 			return true;
 	}
 	
-	public void setxPosAct (float x) {
+	private float proportionalE (float desirePos, float posAct) {
+		return ((desirePos - posAct) * 100f ) / desirePos;
+	}
+	
+	private float tolerance (float desirePos, float percentage) {
+		return (desirePos / 100f) *  percentage; 
+	}
+		
+	public void setxPos (float x) {
 		synchronized (mX) {
-			xPosAct = x;
+			if (x > 0 && x < 300 && xPosDes > 0) {			//Parrot detected and set
+				if (avxPos < 0) avxPos = x;					//Filter set
+				avxPos = ALPF (x,avxPos,Alpha);				//Filtering Position
+			} else {
+				avxPos	= -1;
+			}
 		}
 	}
-	public void setyPosAct (float y) {
+	public void setyPos (float y) {
 		synchronized (mY) {
-			yPosAct = y;
+			if (y > 0 && y < 300 && yPosDes > 0) {			//Parrot detected and set
+				if (avyPos < 0) avyPos = y;					//Filter set
+				avyPos = ALPF (y,avyPos,Alpha);				//Filtering Position
+			} else {
+				avyPos	= -1;
+			}
 		}
 	}
-	public void setzPosAct (float z) {
-		synchronized (mZ) {
-			zPosAct = z;
+	public void setzPos (float z) {
+		synchronized (mZ) {	
+			if (z > 0 && z < 300 && zPosDes > 0) {			//Parrot detected and set
+				if (avzPos < 0) avzPos = z;					//Filter set
+				avzPos = ALPF (z,avzPos,Alpha);				//Filtering Position
+			} else {
+				avzPos	= -1;
+			}
 		}
 	}
-	public float getxPosAct () {
+
+	public float getxPos () {
 		synchronized (mX) {
-			return xPosAct;
+			return avxPos;
 		}
 	}
-	public float getyPosAct () {
+	public float getyPos () {
 		synchronized (mY) {
-			return yPosAct;
+			return avyPos;
 		}
 	}
-	public float getzPosAct () {
+	
+	public float getzPos () {
 		synchronized (mZ) {
-			return zPosAct;
+			return avzPos;
 		}
 	}
-	public void setXPos (float x) {
+	public void setNewxPosDes (float x,float y) {
 		synchronized (mX) {
-			xPosDes = x;
+			setxPosDes (x, y);
 			xPrevError = 0;
-			avXPos = -1;
+			avxPos = -1;
+		}
+	}
+	public void setxPosDes (float x, float y) {
+		synchronized (mX) {
+			xPosDes		=  x;
+			yxPosDes	=  y;
+		}
+	}
+	public float[] getXPosDes () {
+		synchronized (mX) {
+			float[] pos = new float[2];
+			pos[0] = xPosDes;
+			pos[1] = yxPosDes;
+			return pos;
 		}
 	}
 	
@@ -221,16 +262,10 @@ public class PID extends Thread {
 		synchronized (mY) {
 			yPosDes = y;
 			yPrevError = 0;
-			avYPos = -1;
+			avxPos = -1;
 		}
 	}
 	
-	public float getXPos () {
-		synchronized (mX) {
-			return xPosAct;
-		}
-	}
-		
 	public void setPIDEn () {
 		synchronized (mEPID) {
 			enabledPID = true;
@@ -295,9 +330,13 @@ public class PID extends Thread {
 		p_out [j] = tmp;
 	}
 
+	public float signum (float x) {
+		if (x >= 0) return 1f;
+		else return -1f;
+	}
 	
 	public float ALPF (float a, float b, float alpha) {
-		return b + (a - b) * alpha;
+		return round(b + (a - b) * alpha,100);
 	}
 	
 	public float round(float d, int decimal) {

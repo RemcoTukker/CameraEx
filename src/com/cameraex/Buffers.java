@@ -132,7 +132,11 @@ public class Buffers extends Thread {
 					case 5: //Drawing the desired figures using primitive buffered lines
 						mPID.clearPIDEn();
 						if (lines (bufferLines)){
-							mPID.setXPos(mPID.getXPos());
+							float xPos = mPID.getxPos();
+							float yPos = mPID.getyPos();
+							if (xPos > 0 && yPos > 0) {
+								mPID.setNewxPosDes(xPos,yPos);
+							}
 							mPID.setPIDEn();
 							this.onPause();
 						}

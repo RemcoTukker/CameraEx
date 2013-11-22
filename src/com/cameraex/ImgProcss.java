@@ -130,7 +130,7 @@ public class ImgProcss extends Thread {
 		samplesX = (int)Math.ceil(width / N); samplesX2 = samplesX - 1;
 		samplesY = (int)Math.ceil(height / N); samplesY2 = samplesY - 1;
 		
-		windowSampling (9, samplesX, samplesY);											//Resizing window sampling size
+		windowSampling (9, samplesX, samplesY);											//Resizing window sampling size (in relation to the quadcopter position)
 		samplesX = endX - startX;
 		samplesY = endY - startY;
 		samples = samplesX * samplesY;
@@ -157,12 +157,20 @@ public class ImgProcss extends Thread {
 		drawBlueRectangles ();
 		drawBlackRectangles ();
 		pXcm = pixelsXcm();
-		mPID.setxPosAct(xPositionCm ());
-		mPID.setyPosAct(yPositionCm ());
-		mPID.setzPosAct(zPositionCm ());
-		mPID.runPID(isRotating ());
+
+		int isRotating = isRotating ();
+		if (isRotating == 0) {
+			float yPos = yPositionCm ();
+			float xPos = xPositionCm (yPos);
+			mPID.setxPos(xPos);
+			mPID.setyPos(yPos);
+			mPID.setzPos(zPositionCm ());
+		}
+		mPID.runPID(isRotating);
 	}
-	
+	/*Resize the sampling window to optimize the image processing*/
+	/*If quadcopter has not been detected full screen is calculated*/
+	/*If references points are not found or are being updated full screen is calculated*/
 	private boolean windowSampling (int wdwSize, int samplesX, int samplesY) {
 		startX = 0; startY = 0;
 		endX = samplesX; endY = samplesY;
@@ -221,12 +229,14 @@ public class ImgProcss extends Thread {
 	private void setPixel (int x, int y, Bitmap bitmap) {
 		bitmap.setPixel(x,y,Color.WHITE);
 	}
+	/*Checking if the pixels have been already calculated to save processing capacity*/ 
 	private boolean isChecked (int R, int G, int B) {
 		if (R != 255) return false;
 		if (G != 255) return false;
 		if (B != 255) return false;
 		return true;
 	}
+	/*Appliying HUE with tolerance to know if it's red*/ 
 	private boolean isRed (int R, int G, int B) {
 		 if (R > G && R > B) {
 			if (R > 50) {
@@ -237,6 +247,7 @@ public class ImgProcss extends Thread {
 		 }
 		 return false;
 	}
+	/*Appliying HUE with tolerance to know if it's green*/
 	private boolean isGreen (int R, int G, int B) {
 		 if (G > R && G > B) {
 			if (G > 50) {
@@ -247,6 +258,7 @@ public class ImgProcss extends Thread {
 		}
 		return false;
 	}
+	/*Appliying HUE with tolerance to know if it's blue*/
 	private boolean isBlue (int R, int G, int B) {
 
 		if (B > R && B > G) {
@@ -258,6 +270,7 @@ public class ImgProcss extends Thread {
 		 }
 		 return false;
 	}
+	/*Appliying one of luminance formula to determine if the pixels are black*/
 	private boolean isBlack (int R, int G, int B) {
 		float r,g,b;
 		
@@ -280,6 +293,10 @@ public class ImgProcss extends Thread {
 //		if (c < 0.8) return false;
 //		return true;
 //	}
+	/*Sampling the adjacent pixels to determine if there is some color change*/
+	/*green red --> quadcopter*/
+	/*blue red --> beacons*/
+	/*black green --> rotation*/
 	private boolean findAdyacent (int x,int y, int samplesX, int samplesY,int wdwSize,LinkedList<int[]> wClusters) {
 		int i = 0,j = 0, posX, posY;																//Working in samples
 		int[] colors = new int[3];
@@ -347,6 +364,7 @@ public class ImgProcss extends Thread {
 		}
 		return false;
 	}
+	/*If red/blue/green/back are adjacent we create a cluster of pixels storing this information*/
 	private void createCluster (int x, int y, int samplesX, int samplesY, int wdwSize,LinkedList<int[]> wClusters) {
 
 		int [] wdw = new int[4];
@@ -362,7 +380,7 @@ public class ImgProcss extends Thread {
 		wClusters.add(wdw);
 		resizeClusters (wClusters);
 	}
-	
+	/*Selecting only the clusters created at the same level of the quadcopter clusters*/ 
 	private void selectClusters (LinkedList<int[]> wClusters,LinkedList<int[]> rClusters) {
 		int i = 0, j = 0,sY1,eY1,sY2,eY2,mSY,mEY;
 		int [] wdw = new int[4];
@@ -391,6 +409,8 @@ public class ImgProcss extends Thread {
 			resizeClusters (wClusters);
 		}
 	}
+
+	/*After creating the new cluster, possible intersections of clusters are calculated and the clusters are possibly resized*/
 	private void resizeClusters (LinkedList<int[]> wClusters) {
 		int i = 0, j = 0,sX1,sY1,eX1,eY1,sX2,sY2,eX2,eY2;
 		int [] aux = new int[4];
@@ -434,6 +454,7 @@ public class ImgProcss extends Thread {
 			}
 		} while (resizing);
 	}
+	/*Calculating how many pixels in the image correspond to 1 cm in the reaity*/
 	private float pixelsXcm () {
 		int cX1,cX2;
 		float value;
@@ -454,7 +475,8 @@ public class ImgProcss extends Thread {
 			return 4;
 		}
 	}
-	private float xPositionCm () {
+	/*Calculating the position of the quadcopter in the x axis in cm*/
+	private float xPositionCm (float yPos) {
 		int cX1,cX2;
 		float x;
 		
@@ -464,9 +486,16 @@ public class ImgProcss extends Thread {
 			cX1 = (wGClusters.get(0)[0] + wGClusters.get(0)[2]) >> 1;
 			cX2 = (wGClusters.get(1)[0] + wGClusters.get(1)[2]) >> 1;
 			x = ((cX1 + cX2) * NIS) >> 1;
-			return round(x / pXcm,1000);
+			
+			float newX = (yPos * x) / 220;
+			
+			float[]	pos = mPID.getXPosDes();
+		//	Log.i("xPosition","newX: " + newX + " pXcm: " + pXcm + " x: " + x + " yPos: " + yPos);
+			mPID.setxPosDes ((yPos * pos[0]) / pos[1], yPos);
+			return round(newX / pXcm,1000);
 		}
 	}
+	/*Calculating the position of the quadcopter in the z axis in cm*/
 	private float zPositionCm () {
 		int cY1,cY2;
 		float y;//,cY1,cY2,x,y;
@@ -481,6 +510,8 @@ public class ImgProcss extends Thread {
 			return round(y / pXcm,1000);
 		}
 	}
+	/*Calculating the relative size of the quadcopter in centimiters*/
+	/*Using the information calculated in this funciton we will determine afterwards the size of the sampling window*/
 	private float objectSize () {
 		int cX1,cX2,cY1,cY2;
 		float h,x,y;
@@ -509,12 +540,15 @@ public class ImgProcss extends Thread {
 			return round(h / pXcm,1000);
 		}
 	}
+	/*Function to convert pixels to cm using the stored information obtained using the beacons reference*/
 	public float pixelsTocm (float pixels) {
 		return round(pixels / pXcm,1000);
 	}
 	private float imageWSize () {
 		return  pixelsTocm (mCamResW * IS);
 	}
+	/*Caculating the position of the quadcopter in the y axis in relation with the camera, we use the projected image size in the sensor 
+	lenses formula and triangles relations to obtain it*/
 	public float yPositionCm () {
 		//SensorH = 2.8
 		//fl = 9.2
@@ -526,11 +560,15 @@ public class ImgProcss extends Thread {
 		//alpha = 2*arctan(hSensor / 2*f*(M + 1))	Angle Of View
 		float hSensor;
 		double alpha;
+	//	Log.i("objectsize",": "+objectSize ());
+	//	Log.i("imageWSize",": "+imageWSize ());
 
 		hSensor = (objectSize () * 2.8f) / imageWSize ();							//Image size projected on the sensor
-		alpha = 2 * Math.atan(hSensor / (9.2f * ((hSensor / 12.245f) + 1)));		//Alpha (degrees) sen/cos
-		return (float)(12.245f / Math.tan(alpha));									//Finding the distance knowing the angle and the object size
+		alpha = 2 * Math.atan(hSensor / (9.2f * ((hSensor / 12.445f) + 1)));		//Alpha (degrees) sen/cos
+		return (float)(12.445f / Math.tan(alpha));									//Finding the distance knowing the angle and the object size
 	}
+	/*This function determines if the quadcopter is spinning and in which direction*/
+	/*The quadcopter must be recognized properly*/
 	public int isRotating () {
 		// -1 error
 		//  0 not rotating
