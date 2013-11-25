@@ -1,5 +1,6 @@
 package com.cameraex;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import android.app.Activity;
@@ -10,7 +11,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
@@ -37,6 +37,10 @@ public class MainActivity extends Activity {
 	private ImgProcss mImgProcss;
 	private CameraPreview mCameraPreview;
 	private DrawView mDrawView;
+	private ParseSVG mParseSVG;
+	private Equations mEquations;
+	ArrayList<Stroke> mStrokes = null;	
+
 	//1280x768 --> menu = 200 --> 1080
 	private int camResW=320,camResH=240,scale=3,mSH=742-camResH*scale,mSW=1080-camResW*scale;
 	FrameLayout mFrameLayout;
@@ -96,7 +100,12 @@ public class MainActivity extends Activity {
 			mDrawView		= new DrawView(this,camResW,camResH,scale);
 			mImgProcss		= new ImgProcss (mDrawView, mPID);
 			mCameraPreview	= new CameraPreview(this, mImgProcss);
-
+			mEquations = new Equations ();
+			mParseSVG 		= new ParseSVG ();
+			try {
+				mStrokes = mParseSVG.ParseSVGStart(getAssets().open("test1.svg"));
+			} catch (IOException e) {e.printStackTrace();}
+			
 			mFrameLayout.addView(mCameraPreview);
 			mFrameLayout.addView(mDrawView);
 			mSlope			= new Slope ();
@@ -138,7 +147,16 @@ public class MainActivity extends Activity {
 		clearBuffers ();
 		clearImageProcessing ();
 		clearBluetooth ();
+		clearSVG ();
 		loaded = false;
+	}
+	
+	public void clearSVG () {
+		mParseSVG.ParseSVGDestroy();
+		mParseSVG = null;
+		mStrokes.clear();
+		mStrokes = null;
+		mEquations = null;
 	}
 	
 	public void clearImageProcessing () {
