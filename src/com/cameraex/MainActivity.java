@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
@@ -39,7 +40,9 @@ public class MainActivity extends Activity {
 	private DrawView mDrawView;
 	private ParseSVG mParseSVG;
 	private Equations mEquations;
-	ArrayList<Stroke> mStrokes = null;	
+	private ArrayList<Stroke> mStrokes = null;		
+	private ArrayList<Integer> primitives = new ArrayList<Integer>();
+
 
 	//1280x768 --> menu = 200 --> 1080
 	private int camResW=320,camResH=240,scale=3,mSH=742-camResH*scale,mSW=1080-camResW*scale;
@@ -88,7 +91,17 @@ public class MainActivity extends Activity {
 		bReceiverOn = false;
 
 	}
+	
 
+	/*------------------------------------------------------------------------*/
+	/*ooooooooooooooooooo		Initializing Resources		oooooooooooooooooo*/
+	/*------------------------------------------------------------------------*/
+		
+	protected void onResume(){
+		super.onResume();
+		Load();
+	}
+	
 	public void Load(){
 		if (!loaded) {
 			mFrameLayout	= (FrameLayout)findViewById(R.id.frameLayout);
@@ -100,15 +113,17 @@ public class MainActivity extends Activity {
 			mDrawView		= new DrawView(this,camResW,camResH,scale);
 			mImgProcss		= new ImgProcss (mDrawView, mPID);
 			mCameraPreview	= new CameraPreview(this, mImgProcss);
-			mEquations = new Equations ();
+			mEquations = new Equations ();			
+			mSlope			= new Slope ();
 			mParseSVG 		= new ParseSVG ();
 			try {
-				mStrokes = mParseSVG.ParseSVGStart(getAssets().open("test1.svg"));
+				mStrokes = mParseSVG.ParseSVGStart(getAssets().open("test10.svg"));
+				//mEquations.convertStrokes (mStrokes);
+				primitives = mSlope.strokesToPrimitives(mStrokes);
 			} catch (IOException e) {e.printStackTrace();}
 			
 			mFrameLayout.addView(mCameraPreview);
 			mFrameLayout.addView(mDrawView);
-			mSlope			= new Slope ();
 			loaded			= true;
 			
 			if (mBluetoothCore != null) {
@@ -140,6 +155,10 @@ public class MainActivity extends Activity {
 		hideCameraPreview ();
 	}
 
+	/*------------------------------------------------------------------------*/
+	/*ooooooooooooooooooooo		Cleaning Resources		oooooooooooooooooooooo*/
+	/*------------------------------------------------------------------------*/
+	
 	protected void onPause() {
 		super.onPause();
 		clearCameraPreview ();
@@ -200,12 +219,10 @@ public class MainActivity extends Activity {
 			}
 		}
 	}
+	/*------------------------------------------------------------------------*/
+	/*oooooooooooooooooooooo			Buttons			oooooooooooooooooooooo*/
+	/*------------------------------------------------------------------------*/
 	
-	protected void onResume(){
-		super.onResume();
-		Load();
-	}
-
 	/*Take Off / Land*/
 	public void takeOff (View view) {
 		View v = findViewById(R.id.takeOff);
@@ -251,10 +268,71 @@ public class MainActivity extends Activity {
 		v3.setVisibility(4);
 		onBluetooth = false;
 	}
+	
 	public void connectP (View view) {
 		mBuffers.parrotConnect();
 	}
-	/* Touch Screen event */ 
+	
+	/*Changes to Bluetooth View*/
+	public void toBlueTooth (View view) {
+		hideCameraPreview ();
+	}
+	
+	/*Changes to Camera Preview View*/
+	public void toCameraPreview (View view) {
+		showCameraPreview ();
+	}
+	
+	/*Button to discover bluetooth devices*/
+	public void DeviceSearch (View view) {
+		if (mBluetoothCore != null) {
+			btArrayDetected.clear();
+			mBluetoothCore.btCoreDiscover ();
+		}
+	}
+	
+	/*Calls CloseSockets method*/
+	public void CloseConnections (View view) {
+		if (mBluetoothCore != null)
+		mBluetoothCore.btCoreCloseAllConnections ();    
+	}
+	
+	/*Updates references*/
+	public void UpdateReferences (View view) {
+		if (mImgProcss != null)
+		mImgProcss.setUpDate();
+	}
+	
+	/*PaintsFigure*/
+	public void PaintFigure (View view) {
+		mBuffers.onPause();
+		if (primitives != null) {
+			Log.i("primtives","sdspdk");
+			ArrayList<Integer> aux = new ArrayList<Integer>();
+			for(Integer item : primitives) aux.add(item);
+			mBuffers.onSet(0, 0, 0, 0,384,aux);
+		}
+	}
+	
+	/*Enable Bluetooth Button*/
+	public void BluetoothOnOff (View view) {
+		if (mBluetoothCore != null) {
+			View v = findViewById(R.id.BluetoothOnOff);
+			boolean on = ((ToggleButton) v).isChecked();
+			if (on) {
+				mBluetoothCore.btCoreEnableBluetooth();
+			} else {
+				mBluetoothCore.btCoreDisableBluetooth();
+				clearBluetooth ();
+			}
+		}
+	}
+	
+
+	/*------------------------------------------------------------------------*/
+	/*ooooooooooooooooooooo		Touch Screen Events		oooooooooooooooooooooo*/
+	/*------------------------------------------------------------------------*/
+	
 	public boolean onTouchEvent(MotionEvent event) {
 		if (onBluetooth) return false;					//Bluetooth View
 		int eventAction = event.getAction();
@@ -293,22 +371,6 @@ public class MainActivity extends Activity {
 		mBuffers.onPause();
 		mBuffers.onSet(0, 0, 0, 0,buf,mSlope.getBufferLines());
 	}
-
-	public void writeServoMotor (int mAngle) {
-		if (mBluetoothCore != null) {
-			byte[] buffer = new byte[3];
-			buffer[0] = 115; //s
-			buffer[1] = (byte)mAngle;
-			buffer[2] = 37; //%
-			ArrayList<BluetoothDevice> btDevices = mBluetoothCore.btCoreGetConnectedDevices ();
-			if (btDevices != null) {
-				for (int i = 0;i < btDevices.size();i++) {
-					BluetoothDevice btDevice = btDevices.get (i);
-					mBluetoothCore.btCoreSendMessage(buffer, btDevice);
-				}
-			}
-		}
-	}
 	
 	class OnSeekBar implements OnSeekBarChangeListener {
 
@@ -327,6 +389,48 @@ public class MainActivity extends Activity {
 		}
 	}
 	
+	/*Tries to create a bond with the selected device*/
+	class ListItemOnClickDetected implements OnItemClickListener {
+		@Override
+		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+			BluetoothDevice btDevice = mBluetoothCore.btCoreGetDetectedDevice(position);
+			mBluetoothCore.btCoreBond (btDevice);
+		}
+	}
+	/*Removes the bluetooth bond with a certain device*/
+	class ListItemOnClickPaired implements OnItemClickListener {
+		@Override
+		public void onItemClick(AdapterView<?> parent, View view, int position,long id) {
+			BluetoothDevice btDevice = mBluetoothCore.btCoreGetPairedDevice(position);
+			if (!mBluetoothCore.btCoreConnect(btDevice)) {}
+		}
+	}
+
+	/*Removes the bluetooth bond with a certain device*/
+	class ListItemOnLongClickPaired implements OnItemLongClickListener {
+		@Override
+		public boolean onItemLongClick(AdapterView<?> parent, View view, int position,long id) {
+			BluetoothDevice btDevice = mBluetoothCore.btCoreGetPairedDevice(position);
+			mBluetoothCore.btCoreUnBond (btDevice);
+			return true;
+		}
+	}
+	
+	public void writeServoMotor (int mAngle) {
+		if (mBluetoothCore != null) {
+			byte[] buffer = new byte[3];
+			buffer[0] = 115; //s
+			buffer[1] = (byte)mAngle;
+			buffer[2] = 37; //%
+			ArrayList<BluetoothDevice> btDevices = mBluetoothCore.btCoreGetConnectedDevices ();
+			if (btDevices != null) {
+				for (int i = 0;i < btDevices.size();i++) {
+					BluetoothDevice btDevice = btDevices.get (i);
+					mBluetoothCore.btCoreSendMessage(buffer, btDevice);
+				}
+			}
+		}
+	}
 	
 	private class ActionChanged extends BroadcastReceiver {
 		@Override
@@ -367,70 +471,7 @@ public class MainActivity extends Activity {
 			}
 		}
 	};
-	/*Changes to Bluetooth View*/
-	public void toBlueTooth (View view) {
-		hideCameraPreview ();
-	}
-	/*Changes to Camera Preview View*/
-	public void toCameraPreview (View view) {
-		showCameraPreview ();
-	}
-	/*Button to discover bluetooth devices*/
-	public void DeviceSearch (View view) {
-		if (mBluetoothCore != null) {
-			btArrayDetected.clear();
-			mBluetoothCore.btCoreDiscover ();
-		}
-	}
-	/*Calls CloseSockets method*/
-	public void CloseConnections (View view) {
-		if (mBluetoothCore != null)
-		mBluetoothCore.btCoreCloseAllConnections ();    
-	}
-	/*Updates references*/
-	public void UpdateReferences (View view) {
-		if (mImgProcss != null)
-		mImgProcss.setUpDate();
-	}
-	/*Enable Bluetooth Button*/
-	public void BluetoothOnOff (View view) {
-		if (mBluetoothCore != null) {
-			View v = findViewById(R.id.BluetoothOnOff);
-			boolean on = ((ToggleButton) v).isChecked();
-			if (on) {
-				mBluetoothCore.btCoreEnableBluetooth();
-			} else {
-				mBluetoothCore.btCoreDisableBluetooth();
-				clearBluetooth ();
-			}
-		}
-	}
-	/*Tries to create a bond with the selected device*/
-	class ListItemOnClickDetected implements OnItemClickListener {
-		@Override
-		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-			BluetoothDevice btDevice = mBluetoothCore.btCoreGetDetectedDevice(position);
-			mBluetoothCore.btCoreBond (btDevice);
-		}
-	}
-	/*Removes the bluetooth bond with a certain device*/
-	class ListItemOnClickPaired implements OnItemClickListener {
-		@Override
-		public void onItemClick(AdapterView<?> parent, View view, int position,long id) {
-			BluetoothDevice btDevice = mBluetoothCore.btCoreGetPairedDevice(position);
-			if (!mBluetoothCore.btCoreConnect(btDevice)) {}
-		}
-	}
 
-	/*Removes the bluetooth bond with a certain device*/
-	class ListItemOnLongClickPaired implements OnItemLongClickListener {
-		@Override
-		public boolean onItemLongClick(AdapterView<?> parent, View view, int position,long id) {
-			BluetoothDevice btDevice = mBluetoothCore.btCoreGetPairedDevice(position);
-			mBluetoothCore.btCoreUnBond (btDevice);
-			return true;
-		}
-	}
 	/*Updates a list view associated with x arraylist*/ 
 	private void UpdateDeviceListView (ArrayList<BluetoothDevice> btCoreDevArray,ArrayAdapter<String> list){
 		list.clear();

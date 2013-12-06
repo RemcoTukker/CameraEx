@@ -216,7 +216,7 @@ public class ParseSVG {
 							//Input: 	XE1,YE1
 							//Output:	SX1,SY1,EX1,EY1
 							//			0	1	2	3
-							if (State == 0) {
+							if (State == 1) {
 								points[2] 	= initialPosX + points[0];		points[3] 	= initialPosY;	//End
 								points[0] 	= initialPosX;					points[1] 	= initialPosY;	//Start
 								initialPosX = points[2];
@@ -244,7 +244,7 @@ public class ParseSVG {
 							//Input: 	XE1,YE1
 							//Output:	SX1,SY1,EX1,EY1
 							//			0	1	2	3
-							if (State == 0) {
+							if (State == 1) {
 								points[2] 	= initialPosX + points[0];		points[3] 	= initialPosY + points[1];	//End
 								points[0] 	= initialPosX; 					points[1] 	= initialPosY;				//Start
 								initialPosX = points[2];					initialPosY = points[3];
@@ -359,7 +359,7 @@ public class ParseSVG {
 							//Input: 	EX1,EY1
 							//Output:	XC1,YC1,SX1,SY1,EX1,EY1
 							//			0	1	2	3	4	5
-							if (State == 0) {
+							if (State == 1) {
 								points[4] 	= initialPosX + points[0];			points[5] 	= initialPosY + points[1];		//End
 								points[2] 	= initialPosX;						points[3] 	= initialPosY;					//Start
 								points[0]	= initialPosX * 2 - mirrorConX;		points[1]	= initialPosY * 2 - mirrorConY;	//Control1						
@@ -375,7 +375,7 @@ public class ParseSVG {
 							//Input: 	EX1,EY1
 							//Output:	XC1,YC1,SX1,SY1,EX1,EY1
 							//			0	1	2	3	4	5
-							if (State == 0) {
+							if (State == 1) {
 								points[4] 	= points[0];						points[5] 	= points[1];					//End
 								points[2] 	= initialPosX;						points[3] 	= initialPosY;					//Start
 								points[0]	= initialPosX * 2 - mirrorConX;		points[1]	= initialPosY * 2 - mirrorConY;	//Control1
@@ -391,7 +391,7 @@ public class ParseSVG {
 							//Input: 	XE1,YE1
 							//Output:	SX1,SY1,EX1,EY1
 							//			0	1	2	3
-							if (State == 0) {
+							if (State == 1) {
 								points[2] 	= initialPosX;					points[3] 	= initialPosY + points[0];	//End
 								points[0] 	= initialPosX; 					points[1] 	= initialPosY;				//Start
 																			initialPosY = points[3];
@@ -411,6 +411,34 @@ public class ParseSVG {
 																			initialPosY = points[3];
 								type 		= 3;
 								Log.i("LINEV","POINTS: " + points[0] + "," + points[1]+ " " + points[2]+ "," + points[3]);
+							}
+							break;
+						case 'z':
+							//"Line"
+							//Lower case --> Reference previous point
+							//Input: 	XE1,YE1
+							//Output:	SX1,SY1,EX1,EY1
+							//			0	1	2	3
+							if (State == 1) {
+								points[2] 	= initialPosX + points[0];		points[3] 	= initialPosY + points[1];	//End
+								points[0] 	= initialPosX; 					points[1] 	= initialPosY;				//Start
+								initialPosX = points[2];					initialPosY = points[3];
+								type 		= 3;
+								Log.i("line","POINTS: " + points[0] + "," + points[1]+ " " + points[2]+ "," + points[3]);
+							}
+							break;
+						case 'Z':
+							//"Line"
+							//Upper case --> Reference top left
+							//Input: 	XE1,YE1
+							//Output:	SX1,SY1,EX1,EY1
+							//			0	1	2	3
+							if (State == 0) {
+								points[2] 	= points[0];					points[3] 	= points[1];	//End
+								points[0] 	= initialPosX; 					points[1] 	= initialPosY;	//Start
+								initialPosX = points[2];					initialPosY = points[3];
+								type 		= 3;
+								Log.i("LINE","POINTS: " + points[0] + "," + points[1]+ " " + points[2]+ "," + points[3]);
 							}
 							break;
 						default:

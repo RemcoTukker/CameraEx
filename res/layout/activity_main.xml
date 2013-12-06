@@ -55,7 +55,15 @@
 					    android:layout_height="wrap_content"
 					    android:layout_marginLeft="10dp"
 					    android:onClick="UpdateReferences"
-				        android:text="@string/updateReferences" />
+				        android:text="@string/updateReferences" />	
+					<Button
+					    android:id="@+id/PaintFigure"
+					    android:layout_width="wrap_content"
+					    android:layout_height="wrap_content"
+					    android:layout_marginLeft="10dp"
+					    android:onClick="PaintFigure"
+				        android:text="@string/paintFigure" />
+					
 					
 
 				</LinearLayout>

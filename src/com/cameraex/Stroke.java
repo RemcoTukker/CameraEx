@@ -44,7 +44,7 @@ public class Stroke {
 	
 	public void StrokeSet3Bezier (float XC1, float YC1, float XC2, float YC2, float X1, float Y1, float X2, float Y2, String Type) {
 		type = Type;		
-		x1 = XC1; y1 = YC1; x2 = XC2; y2 = YC2; x3 = X1; y3 = Y2; x4 = X2; y4 = Y2;
+		x1 = XC1; y1 = YC1; x2 = XC2; y2 = YC2; x3 = X1; y3 = Y1; x4 = X2; y4 = Y2;
 	}
 	
 	public float[] StrokeGet3Bezier () {

@@ -184,6 +184,34 @@ public class Slope {
 		return info;
 	}
 	
+	public ArrayList<Integer> strokesToPrimitives (ArrayList<Stroke> strokes) {
+		if (strokes == null) return null;
+		ArrayList<Integer> primitives = new ArrayList<Integer>();
+		for (Stroke stroke : strokes) {
+			String type = stroke.StrokeGetType();
+			if (type.equals ("arc"))			primitives.add(Line (stroke.StrokeGetArc()));
+			if (type.equals ("cubicbezier"))	primitives.add(BezierCubic(stroke.StrokeGet3Bezier()));
+			if (type.equals ("line"))			primitives.add(Line (stroke.StrokeGetLine()));
+			if (type.equals ("quadraticbezier"))primitives.add(BezierQuadratic(stroke.StrokeGet2Bezier()));
+		}
+		return primitives;
+	}
+	
+	private int Line (float[] Points) {	
+		return toLinesSVG (Points[0],Points[1],Points[2],Points[3]);
+	}
+	private int Line2 (float[] Points) {	
+		return toLinesSVG (Points[2],Points[3],Points[4],Points[5]);
+	}
+	private int Line3 (float[] Points) {	
+		return toLinesSVG (Points[4],Points[5],Points[6],Points[7]);
+	}
+	private int BezierCubic (float[] Points) {	
+		return toCurve3SVG (Points[0],Points[1],Points[2],Points[3],Points[4],Points[5],Points[6],Points[7]);
+	}
+	private int BezierQuadratic (float[] Points) {	
+		return toCurve2SVG (Points[0],Points[1],Points[2],Points[3],Points[4],Points[5]);
+	}
 	private int toLines (float xi, float yi, float xo, float yo,int N) {
 		float sX,sY,m;
 		int edges = 1;
@@ -194,9 +222,6 @@ public class Slope {
 		if (sY == 0) return (int)signum(sX) * ((edges << 6) + 6);
 		m = Math.abs(sY / sX);
 
-	/*	Log.i("--------","--------");
-		Log.i("m: " + m,"m: " + m);
-		Log.i("--------","--------");*/
 		if (m > 0.4 && m < 5) {
 			if (sX < 0 && sY < 0) return (edges << 6) + 1;
 			if (sX < 0 && sY > 0) return (edges << 6) + 3;
@@ -209,6 +234,150 @@ public class Slope {
 		return 0;
 	}
 	
+	private int toLinesSVG (float xi, float yi, float xo, float yo) {
+		float sX,sY;
+		
+		sX = (xo - xi );
+		sY = (yo - yi );
+		if (sX == 0) {
+			if (sY > 0) return 96;			//12 v
+			if (sY < 0) return 104;			//13 ^
+		}
+		if (sY == 0) {
+			if (sX > 0) return 112;			//14 >
+			if (sX < 0) return 120;			//15 <
+		}
+		if (sX < 0 && sY < 0) return 64;	//8
+		if (sX > 0 && sY < 0) return 72;	//9
+		if (sX < 0 && sY > 0) return 80;	//10
+		if (sX > 0 && sY > 0) return 88;	//11
+		
+		return 0;
+	}
+	private int toCurve3SVG (float xc1, float yc1, float xc2, float yc2,float xi, float yi, float xo, float yo) {
+		
+		float y =0, x = 0, c1 = 0, c2 = 0;
+		int direction = 0;
+		//-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!
+		//----	Top Left Reference	----
+		//-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!
+		
+		//Main Line
+		float X = (xo - xi);			
+		float Y = (yo - yi);
+		float K = (X * yi) - (Y * xi);
+		if (X == 0 && Y != 0) {
+			if (xc1 > xi) c1 = 1;		//right
+			else if (xc1 < xi) c1 = -1;	//left
+			if (xc2 > xi) c2 = 1;		//right
+			else if (xc2 < xi) c2 = -1;	//left
+		} else if (X != 0 && Y == 0) {
+			if (yc1 > yi) c1 = -1;		//up
+			else if (yc1 < yi) c1 = 1;	//down
+			if (yc2 > yi) c2 = -1;		//up
+			else if (yc2 < yi) c2 = 1;	//down
+		} else if (X != 0 && Y != 0) {
+			//Control Point One
+			y = (Y * xc1 + K) / X;
+			Log.i("tocurve3","y: " + y);
+			if (yc1 > y) c1 = -1;		//up
+			else if (yc1 < y) c1 = 1;	//down
+			//Control Point Two
+			y = (Y * xc2 + K) / X;
+			Log.i("tocurve3","y: " + y);
+			if (yc2 > y) c2 = -1;		//up
+			else if (yc2 < y) c2 = 1;	//down
+		} else {
+			return -1;
+		}
+		Log.i("tocurve3","xi: " + xi + " xo: " + xo + " yi: " + yi + " yo: " + yo);
+		Log.i("tocurve3","xc1: " + xc1 + " yc1: " + yc1 + " xc2: " + xc2 + " yc2: " + yc2);
+		Log.i("tocurve3","c1: " + c1 + " c2: " + c2 + " X: " + X + " Y: " + Y + " K: " + K);
+		//----- Direction ------
+		//   - \ +   |   + / -  
+		//     0   - 5 +  1     
+		//     + \   |  / +     
+		//_____4_____ ____6_____
+		//     -          -     
+		//       /   |  \       
+		//     2   - 7 +  3     
+		//   + / -   |  - \ +   
+		//----------------------
+		if (X < 0 && Y < 0) 		direction = 0;	//0 << 3
+		else if (X < 0 && Y > 0)	direction = 16;	//2 << 3
+		else if (X > 0 && Y < 0)	direction = 8;	//1 << 3  
+		else if (X > 0 && Y > 0)	direction = 24;	//3 << 3
+		else if (X < 0 && Y == 0)	direction = 32;	//4 << 3
+		else if (X > 0 && Y == 0)	direction = 48;	//6 << 3
+		else if (X == 0 && Y < 0)	direction = 40;	//6 << 3
+		else if (X == 0 && Y > 0)	direction = 56;	//7 << 3
+		Log.i("tocurve3","direction: " + direction + " dir>>: " + (direction>>3));
+		if (c1 < 0 && c2 < 0)	return direction + 1; //down
+		if (c1 < 0 && c2 > 0)	return direction + 2; //down up
+		if (c1 > 0 && c2 < 0)	return direction + 3; //up down
+		if (c1 > 0 && c2 > 0)	return direction + 4; //up
+		if (c1 < 0 && c2 == 0)	return direction + 1; //down
+		if (c1 > 0 && c2 == 0)	return direction + 4; //up
+		if (c1 == 0 && c2 < 0)	return direction + 1; //down
+		if (c1 == 0 && c2 > 0)	return direction + 4; //up
+		
+		return -1;
+	}
+	
+	private int toCurve2SVG (float xc1, float yc1,float xi, float yi, float xo, float yo) {
+		
+		
+		float y =0, c1 = 0;
+		int direction = 0;
+		//-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!
+		//----	Top Left Reference	----
+		//-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!
+		
+		//Main Line
+		float X = (xo - xi);			
+		float Y = (yo - yi);
+		float K = (X * yi) - (Y * xi);
+		if (X == 0 && Y != 0) {
+			if (xc1 > xi) c1 = 1;		//right
+			else if (xc1 < xi) c1 = -1;	//left
+		} else if (X != 0 && Y == 0) {
+			if (yc1 > yi) c1 = -1;		//up
+			else if (yc1 < yi) c1 = 1;	//down
+		} else if (X != 0 && Y != 0) {
+			//Control Point One
+			y = (Y * xc1 + K) / X;
+			Log.i("tocurve2","y: " + y);
+			if (yc1 > y) c1 = -1;		//up
+			else if (yc1 < y) c1 = 1;	//down
+		} else {
+			return -1;
+		}
+		Log.i("tocurve2","xi: " + xi + " xo: " + xo + " yi: " + yi + " yo: " + yo);
+		Log.i("tocurve2","xc1: " + xc1 + " yc1: " + yc1);
+		Log.i("tocurve2","c1: " + c1 +" X: " + X + " Y: " + Y + " K: " + K);
+		//----- Direction ------
+		//   - \ +   |   + / -  
+		//     0   - 5 +  1     
+		//     + \   |  / +     
+		//_____4_____ ____6_____
+		//     -          -     
+		//       /   |  \       
+		//     2   - 7 +  3     
+		//   + / -   |  - \ +   
+		//----------------------
+		if (X < 0 && Y < 0) 		direction = 0;	//0 << 3
+		else if (X < 0 && Y > 0)	direction = 16;	//2 << 3
+		else if (X > 0 && Y < 0)	direction = 8;	//1 << 3  
+		else if (X > 0 && Y > 0)	direction = 24;	//3 << 3
+		else if (X < 0 && Y == 0)	direction = 32;	//4 << 3
+		else if (X > 0 && Y == 0)	direction = 48;	//6 << 3
+		else if (X == 0 && Y < 0)	direction = 40;	//6 << 3
+		else if (X == 0 && Y > 0)	direction = 56;	//7 << 3
+		Log.i("tocurve3","direction: " + direction);
+		if (c1 < 0) return direction + 1; //down
+		if (c1 > 0) return direction + 4; //up		
+		return -1;
+	}
 	private float signum (float x) {
 		if (x < 0) return -1; 
 		else return 1;
